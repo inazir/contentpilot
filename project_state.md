@@ -150,7 +150,12 @@ Completed successfully.
   - __init__.py
 - Added retry/backoff handling
 - Added normalized AIClientError abstraction
-- Verified imports and Docker compatibility
+- Verified shared.ai import path with direct script execution
+- Discovered and fixed missing Docker base dependency for requests
+- Verified Docker `--env-file .env` injection and Anthropic request execution^
+- validated both Anthropic and DeepSeek providers
+- verified provider interchangeability
+- confirmed Docker env propagation for multiple providers
 
 ## Architecture Decisions
 
