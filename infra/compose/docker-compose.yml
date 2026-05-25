@@ -1,0 +1,8 @@
+services:
+  daily_news:
+    build:
+      context: ../..
+      dockerfile: modules/daily_news/Dockerfile
+    image: contentpilot-daily-news:latest
+    environment:
+      - ENVIRONMENT=development
