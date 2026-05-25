@@ -1,3 +1,23 @@
+# ============================================================
+# Python cache files (IMPORTANT)
+# ============================================================
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Pytest / tooling caches (optional but recommended)
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ============================================================
+# Existing rules (keep yours as-is)
+# ============================================================
+
+.env
+
 # Ignore everything inside data/ directories
 data/db/*
 data/cache/*
