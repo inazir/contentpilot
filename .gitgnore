@@ -1,0 +1,9 @@
+# Ignore everything inside data/ directories
+data/db/*
+data/cache/*
+data/logs/*
+
+# But keep the directories themselves tracked by Git via their .gitkeep files
+!data/db/.gitkeep
+!data/cache/.gitkeep
+!data/logs/.gitkeep
