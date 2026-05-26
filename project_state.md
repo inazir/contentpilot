@@ -140,6 +140,72 @@ contentpilot/
 
 Completed successfully.
 ### Latest Completed Work
+#### 2026-05-26 (15:00)
+## Phase 3 — Social Publishing Layer (COMPLETED - Core Wiring)
+
+### Goal
+Enable publishing pipeline from `daily_news` module to social platforms (Facebook + Instagram), with safe mock-first execution controlled via environment variables.
+
+---
+
+### What was implemented
+
+- Introduced `shared/social/` publishing layer
+  - `facebook.py` → Facebook publishing client (mock + real-ready structure)
+  - `instagram.py` → Instagram publishing client (mock + real-ready structure)
+  - `publisher.py` → unified orchestration layer for multi-platform publishing
+
+- Extended `runner.py` in `modules/daily_news/`
+  - Generates content (Phase 2)
+  - Optionally triggers publishing based on `PUBLISH_ENABLED`
+
+- Environment-driven publishing control:
+  - `PUBLISH_ENABLED=false` → generation only (safe mode)
+  - `PUBLISH_ENABLED=true` → publishing pipeline executes
+
+- Docker integration updated:
+  - `PUBLISH_ENABLED` passed into containers via `.env`
+  - Publishing behavior controlled at runtime (no code changes required)
+
+---
+
+### Testing results
+
+- Dry-run mode confirmed working:
+  - Post generation successful
+  - Publishing skipped as expected
+
+- Enabled publishing mode confirmed working:
+  - Facebook mock publish executed
+  - Instagram mock publish executed
+  - Graceful handling of missing image URLs for Instagram
+  - No runtime crashes
+
+---
+
+### Key design decisions
+
+- Social platforms are abstracted behind `shared/social/`
+- No real API credentials required yet (mock-first design)
+- Instagram and Facebook treated as independent adapters
+- Publishing remains optional and controlled entirely via environment variables
+
+---
+
+### Current limitation (intentional)
+
+- No real Facebook Page ID integration yet
+- No real Instagram Graph API token setup yet
+- Image generation pipeline not enforced for Instagram posts yet
+
+These will be added in a later phase after stabilizing content pipeline.
+
+---
+
+### Status
+
+Phase 3 core infrastructure: COMPLETED
+Ready for production-grade integration in next phase.
 #### 2026-05-26 (14:00)
 ## Phase 2 — First Production Module (daily_news) ✅ COMPLETED
 

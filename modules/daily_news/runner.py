@@ -23,6 +23,33 @@ DEFAULT_TOPICS = [
     "filing taxes in Germany for the first time",
 ]
 
+# Platforms to publish to when PUBLISH_ENABLED=true
+# Override per-module via env if needed later
+_PUBLISH_PLATFORMS = ["facebook", "instagram"]
+
+
+def _publishing_enabled() -> bool:
+    return os.getenv("PUBLISH_ENABLED", "false").strip().lower() in {"1", "true", "yes"}
+
+
+def _publish(topic: str, post_text: str) -> None:
+    """Publishing hook — only called when PUBLISH_ENABLED=true."""
+    from shared.social import publish_post, PublishError
+
+    content = {
+        "title": topic,
+        "text": post_text,
+        "image_url": None,   # Phase 4 will add image generation here
+    }
+
+    for platform in _PUBLISH_PLATFORMS:
+        try:
+            publish_post(platform, content)
+        except PublishError as exc:
+            logger.error("Publish failed for %s: %s", platform, exc)
+        except ValueError as exc:
+            logger.error("Invalid platform config: %s", exc)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Daily News Post Generator")
@@ -58,11 +85,15 @@ def main():
     print("=" * 60 + "\n")
 
     if args.dry_run:
-        logger.info("Dry-run mode: post not published.")
+        logger.info("Dry-run mode: publishing skipped.")
         return
 
-    # Publishing hook — Phase 3 will wire this to social platforms
-    logger.info("Publishing not yet implemented. Use --dry-run for now.")
+    if not _publishing_enabled():
+        logger.info("PUBLISH_ENABLED=false: publishing skipped.")
+        return
+
+    logger.info("Publishing to social platforms...")
+    _publish(topic, post)
 
 
 if __name__ == "__main__":
