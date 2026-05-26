@@ -10,6 +10,9 @@ COPY shared/ /app/shared/
 # Copy module code
 COPY modules/daily_news/ /app/module/
 
+# Copy root helper scripts for local container validation
+COPY scripts/ /app/scripts/
+
 WORKDIR /app/module
 
 CMD ["python", "runner.py"]
