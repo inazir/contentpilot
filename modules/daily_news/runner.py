@@ -1,19 +1,17 @@
 # modules/daily_news/runner.py
 import argparse
-import logging
-import os
 import sys
 
 # Allow running as: python -m modules.daily_news.runner
 sys.path.insert(0, "/app")
 
+from shared.logging import configure_logging, get_logger
+from shared.store import init_db
+from shared.social import publish_post, get_publish_mode
 from generator import generate_news_post
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
-logger = logging.getLogger("daily_news")
+configure_logging()
+logger = get_logger("daily_news")
 
 DEFAULT_TOPICS = [
     "registering your address in Germany (Anmeldung) and why it matters",
@@ -23,40 +21,15 @@ DEFAULT_TOPICS = [
     "filing taxes in Germany for the first time",
 ]
 
-# Platforms to publish to when PUBLISH_ENABLED=true
-# Override per-module via env if needed later
-_PUBLISH_PLATFORMS = ["facebook", "instagram"]
+_PLATFORMS = ["facebook", "instagram"]
 
 
-def _publishing_enabled() -> bool:
-    return os.getenv("PUBLISH_ENABLED", "false").strip().lower() in {"1", "true", "yes"}
-
-
-def _publish(topic: str, post_text: str) -> None:
-    """Publishing hook — only called when PUBLISH_ENABLED=true."""
-    from shared.social import publish_post, PublishError
-
-    content = {
-        "title": topic,
-        "text": post_text,
-        "image_url": None,   # Phase 4 will add image generation here
-    }
-
-    for platform in _PUBLISH_PLATFORMS:
-        try:
-            publish_post(platform, content)
-        except PublishError as exc:
-            logger.error("Publish failed for %s: %s", platform, exc)
-        except ValueError as exc:
-            logger.error("Invalid platform config: %s", exc)
-
-
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Daily News Post Generator")
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Generate and print post without publishing",
+        help="Generate only and skip publishing",
     )
     parser.add_argument(
         "--topic",
@@ -69,31 +42,52 @@ def main():
     import random
     topic = args.topic or random.choice(DEFAULT_TOPICS)
 
-    logger.info("Selected topic: %s", topic)
-    logger.info("Generating post...")
+    init_db()
+    logger.info(
+        "Starting daily_news run",
+        extra={
+            "topic": topic,
+            "dry_run": args.dry_run,
+            "publish_mode": get_publish_mode(),
+        },
+    )
 
     try:
-        post = generate_news_post(topic)
+        post_text = generate_news_post(topic)
     except Exception as exc:
-        logger.error("Failed to generate post: %s", exc)
+        logger.error("Content generation failed", extra={"error": str(exc)})
         sys.exit(1)
 
     print("\n" + "=" * 60)
     print("GENERATED POST:")
     print("=" * 60)
-    print(post)
+    print(post_text)
     print("=" * 60 + "\n")
 
     if args.dry_run:
-        logger.info("Dry-run mode: publishing skipped.")
+        logger.info("Dry-run enabled — skipping publishing")
         return
 
-    if not _publishing_enabled():
-        logger.info("PUBLISH_ENABLED=false: publishing skipped.")
-        return
+    summary = publish_post(
+        content={
+            "title": topic,
+            "text": post_text,
+            "image_url": None,
+        },
+        platforms=_PLATFORMS,
+        module_name="daily_news",
+    )
 
-    logger.info("Publishing to social platforms...")
-    _publish(topic, post)
+    logger.info(str(summary))
+    for result in summary.results:
+        logger.info(str(result))
+
+    if summary.failed:
+        logger.warning(
+            "%d platform(s) failed",
+            len(summary.failed),
+            extra={"failed_platforms": [r.platform for r in summary.failed]},
+        )
 
 
 if __name__ == "__main__":

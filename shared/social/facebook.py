@@ -1,16 +1,19 @@
 """
 Facebook publisher — mock implementation.
 
-Real implementation will replace _publish() body only.
+Real implementation will replace the mock block only.
 Interface stays identical.
 """
 
 import logging
+import uuid
+
+from .exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
 
-def publish(content: dict) -> bool:
+def publish(content: dict, mode: str) -> tuple[bool, str | None, str | None]:
     """
     Publish content to Facebook.
 
@@ -20,22 +23,25 @@ def publish(content: dict) -> bool:
             "text":      str,
             "image_url": str | None
         }
+        mode: "mock" or "real"
 
     Returns:
-        True on success, False on failure.
+        (success, external_post_id, error_message)
     """
-    title = content.get("title", "")
-    text = content.get("text", "")
-    image_url = content.get("image_url")
+    text = content.get("text", "").strip()
+    if not text:
+        raise ValidationError("text is empty", platform="facebook")
 
+    if mode == "real":
+        raise NotImplementedError(
+            "Facebook real API not implemented yet. Set PUBLISH_MODE=mock."
+        )
+
+    fake_id = f"fb_mock_{uuid.uuid4().hex[:10]}"
     logger.info(
-        "Facebook publish | title=%r | text_length=%d | has_image=%s",
-        title,
+        "Facebook mock publish | post_id=%s | text_length=%d | has_image=%s",
+        fake_id,
         len(text),
-        image_url is not None,
+        content.get("image_url") is not None,
     )
-
-    # --- MOCK: replace this block with real Graph API call ---
-    logger.info("Facebook mock: post published successfully")
-    return True
-    # ---------------------------------------------------------
+    return True, fake_id, None

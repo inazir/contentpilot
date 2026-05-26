@@ -1,76 +1,158 @@
 # shared/social/publisher.py
 """
-Unified social publishing entry point.
+Orchestrates publishing across social platforms.
 
-Modules call publish_post() without knowing which platform
-implementation is used. Adding a new platform means:
-  1. Create shared/social/newplatform.py with publish(content) -> bool
-  2. Add one entry to _PUBLISHERS below
-
-Nothing else changes.
+Responsibilities:
+- read publish mode from environment
+- check duplicates via shared/store
+- call platform adapters safely
+- catch and classify exceptions
+- record publish attempts in SQLite
+- return aggregated results without crashing the caller
 """
 
 import logging
-from typing import Optional
+import os
+
+from shared.store import (
+    already_published,
+    compute_content_hash,
+    record_publish,
+)
 
 from .exceptions import PublishError
+from .models import PublishResult, PublishSummary
 from . import facebook, instagram
 
 logger = logging.getLogger(__name__)
 
-# Registry: platform name → module with publish(content) -> bool
-_PUBLISHERS = {
+# Registry: platform name → module with publish(content, mode)
+_ADAPTERS = {
     "facebook": facebook,
     "instagram": instagram,
 }
 
 
+def get_publish_mode() -> str:
+    """Return the configured publish mode."""
+    mode = os.getenv("PUBLISH_MODE", "").strip().lower()
+    if mode:
+        return mode
+
+    # backward compatibility with older PUBLISH_ENABLED flag
+    if os.getenv("PUBLISH_ENABLED", "false").strip().lower() in {"1", "true", "yes"}:
+        return "mock"
+    return "disabled"
+
+
 def publish_post(
-    platform: str,
     content: dict,
-) -> bool:
+    platforms: list[str],
+    module_name: str,
+) -> PublishSummary:
     """
-    Publish content to a social platform.
+    Publish content to requested platforms and return aggregated results.
 
-    Args:
-        platform: "facebook" or "instagram"
-        content: {
-            "title":     str,
-            "text":      str,
-            "image_url": Optional[str]
-        }
-
-    Returns:
-        True on success, False on failure.
-
-    Raises:
-        ValueError: If platform is not registered.
+    This function never raises, even when one platform fails.
     """
-    platform = platform.strip().lower()
+    summary = PublishSummary(module_name=module_name)
+    mode = get_publish_mode()
 
-    publisher = _PUBLISHERS.get(platform)
-    if publisher is None:
-        raise ValueError(
-            f"Unknown platform '{platform}'. "
-            f"Registered: {list(_PUBLISHERS.keys())}"
-        )
+    if mode == "disabled":
+        logger.info("PUBLISH_MODE=disabled — skipping publishing")
+        return summary
 
-    _validate_content(content)
+    text = content.get("text", "")
+    content_hash = compute_content_hash(text)
 
-    try:
-        success = publisher.publish(content)
-        if success:
-            logger.info("Published to %s successfully", platform)
-        else:
-            logger.warning("Publish to %s returned False", platform)
-        return success
+    for platform in platforms:
+        key = platform.strip().lower()
+        adapter = _ADAPTERS.get(key)
+        if adapter is None:
+            error_message = f"Unknown platform '{platform}'"
+            logger.error(error_message)
+            summary.results.append(PublishResult(
+                platform=platform,
+                success=False,
+                error_message=error_message,
+                retryable=False,
+            ))
+            continue
 
-    except Exception as exc:
-        logger.error("Publish to %s failed: %s", platform, exc)
-        raise PublishError(str(exc), platform=platform) from exc
+        if already_published(content_hash, key):
+            logger.info(
+                "Duplicate content detected — skipping publish | platform=%s | module=%s | hash=%s",
+                key, module_name, content_hash[:12],
+            )
+            summary.results.append(PublishResult(
+                platform=key,
+                success=True,
+                external_post_id="[duplicate:skipped]",
+                metadata={"duplicate": True},
+            ))
+            continue
 
+        try:
+            success, external_post_id, error_message = adapter.publish(content, mode)
+            status = "success" if success else "failed"
+            record_publish(
+                content_hash=content_hash,
+                platform=key,
+                module_name=module_name,
+                status=status,
+                external_post_id=external_post_id,
+                error_message=error_message,
+            )
+            summary.results.append(PublishResult(
+                platform=key,
+                success=success,
+                external_post_id=external_post_id,
+                error_message=error_message,
+                retryable=False,
+            ))
 
-def _validate_content(content: dict) -> None:
-    """Fail fast on missing required fields before hitting any API."""
-    if not content.get("text", "").strip():
-        raise ValueError("content['text'] is required and cannot be empty")
+        except PublishError as exc:
+            logger.error(
+                "Publish failed | platform=%s | retryable=%s | error=%s",
+                key, exc.retryable, exc,
+            )
+            record_publish(
+                content_hash=content_hash,
+                platform=key,
+                module_name=module_name,
+                status="failed",
+                error_message=str(exc),
+            )
+            summary.results.append(PublishResult(
+                platform=key,
+                success=False,
+                error_message=str(exc),
+                retryable=exc.retryable,
+            ))
+
+        except NotImplementedError as exc:
+            logger.error("Platform %s real mode not implemented: %s", key, exc)
+            summary.results.append(PublishResult(
+                platform=key,
+                success=False,
+                error_message=str(exc),
+                retryable=False,
+            ))
+
+        except Exception as exc:
+            logger.exception("Unexpected error publishing to %s", key)
+            record_publish(
+                content_hash=content_hash,
+                platform=key,
+                module_name=module_name,
+                status="failed",
+                error_message=str(exc),
+            )
+            summary.results.append(PublishResult(
+                platform=key,
+                success=False,
+                error_message=f"Unexpected: {exc}",
+                retryable=True,
+            ))
+
+    return summary

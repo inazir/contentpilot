@@ -6,11 +6,14 @@ Interface stays identical.
 """
 
 import logging
+import uuid
+
+from .exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
 
-def publish(content: dict) -> bool:
+def publish(content: dict, mode: str) -> tuple[bool, str | None, str | None]:
     """
     Publish content to Instagram.
 
@@ -20,27 +23,30 @@ def publish(content: dict) -> bool:
             "text":      str,
             "image_url": str | None
         }
+        mode: "mock" or "real"
 
     Returns:
-        True on success, False on failure.
+        (success, external_post_id, error_message)
     """
-    title = content.get("title", "")
-    text = content.get("text", "")
-    image_url = content.get("image_url")
+    text = content.get("text", "").strip()
+    if not text:
+        raise ValidationError("text is empty", platform="instagram")
 
-    # Instagram requires an image for feed posts — warn but don't hard-fail
-    # so mock behavior stays clean during development
-    if not image_url:
-        logger.warning("Instagram publish called without image_url — real API will reject this")
+    if not content.get("image_url"):
+        logger.warning(
+            "Instagram publish has no image_url — real API will reject this"
+        )
 
+    if mode == "real":
+        raise NotImplementedError(
+            "Instagram real API not implemented yet. Set PUBLISH_MODE=mock."
+        )
+
+    fake_id = f"ig_mock_{uuid.uuid4().hex[:10]}"
     logger.info(
-        "Instagram publish | title=%r | text_length=%d | has_image=%s",
-        title,
+        "Instagram mock publish | post_id=%s | text_length=%d | has_image=%s",
+        fake_id,
         len(text),
-        image_url is not None,
+        content.get("image_url") is not None,
     )
-
-    # --- MOCK: replace this block with real Graph API call ---
-    logger.info("Instagram mock: post published successfully")
-    return True
-    # ---------------------------------------------------------
+    return True, fake_id, None
