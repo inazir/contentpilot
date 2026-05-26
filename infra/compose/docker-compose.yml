@@ -1,8 +1,10 @@
 services:
+
   daily_news:
     build:
       context: ../..
       dockerfile: modules/daily_news/Dockerfile
-    image: contentpilot-daily-news:latest
-    environment:
-      - ENVIRONMENT=development
+    env_file: ../../.env
+    volumes:
+      - ../../data:/app/data
+    restart: "no"

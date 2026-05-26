@@ -1,0 +1,4 @@
+# modules/daily_news dependencies
+# requests is already in base image via shared/ai
+# nothing additional needed for text-only generation
+requests>=2.31.0

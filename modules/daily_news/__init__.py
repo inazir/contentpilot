@@ -1,0 +1,1 @@
+# modules/daily_news/__init__.py

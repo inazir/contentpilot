@@ -1,9 +1,15 @@
 FROM contentpilot-base:latest
 
-WORKDIR /app
-ENV PYTHONPATH=/app
+# Install module-specific dependencies (currently none beyond base)
+COPY requirements/news.txt /tmp/news.txt
+RUN pip install --no-cache-dir -r /tmp/news.txt
 
-COPY shared /app/shared
-COPY modules/daily_news /app/modules/daily_news
+# Copy shared layer (already in base, but explicit copy handles dev overrides)
+COPY shared/ /app/shared/
 
-CMD ["python3", "modules/daily_news/main.py"]
+# Copy module code
+COPY modules/daily_news/ /app/module/
+
+WORKDIR /app/module
+
+CMD ["python", "runner.py"]
