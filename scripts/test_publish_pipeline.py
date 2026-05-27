@@ -12,6 +12,19 @@ sys.path.insert(0, ROOT)
 
 os.environ.setdefault("PUBLISH_MODE", "mock")
 os.environ.setdefault("STORE_DB_PATH", os.path.join(ROOT, "data", "db", "contentpilot_test.db"))
+os.environ.setdefault("SOCIAL_TARGETS", "test_facebook_main,test_instagram_main")
+os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__PLATFORM", "facebook")
+os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__ENABLED", "true")
+os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__PAGE_ID", "mock_page_123")
+os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__ACCESS_TOKEN", "mock_token_xyz")
+os.environ.setdefault("SOCIAL__TEST_INSTAGRAM_MAIN__PLATFORM", "instagram")
+os.environ.setdefault("SOCIAL__TEST_INSTAGRAM_MAIN__ENABLED", "true")
+os.environ.setdefault("SOCIAL__TEST_INSTAGRAM_MAIN__PAGE_ID", "mock_ig_123")
+os.environ.setdefault("SOCIAL__TEST_INSTAGRAM_MAIN__ACCESS_TOKEN", "mock_ig_token")
+
+_store_db_path = os.environ["STORE_DB_PATH"]
+if os.path.exists(_store_db_path):
+    os.remove(_store_db_path)
 
 from shared.logging import configure_logging, get_logger
 from shared.store import init_db
@@ -33,7 +46,7 @@ def test_mock_publish() -> None:
 
     summary = publish_post(
         content=content,
-        platforms=["facebook", "instagram"],
+        targets=["test_facebook_main", "test_instagram_main"],
         module_name="test",
     )
 
@@ -55,9 +68,15 @@ def test_partial_failure() -> None:
         "image_url": None,
     }
 
+    os.environ["SOCIAL_TARGETS"] = "test_facebook_main,test_unknown_platform"
+    os.environ["SOCIAL__TEST_UNKNOWN_PLATFORM__PLATFORM"] = "unknown_platform"
+    os.environ["SOCIAL__TEST_UNKNOWN_PLATFORM__ENABLED"] = "true"
+    os.environ["SOCIAL__TEST_UNKNOWN_PLATFORM__PAGE_ID"] = "bad_id"
+    os.environ["SOCIAL__TEST_UNKNOWN_PLATFORM__ACCESS_TOKEN"] = "bad_token"
+
     summary = publish_post(
         content=content,
-        platforms=["facebook", "unknown_platform"],
+        targets=["test_facebook_main", "test_unknown_platform"],
         module_name="test",
     )
 
@@ -81,7 +100,7 @@ def test_disabled_mode() -> None:
     init_db()
     summary = publish_post(
         content={"title": "x", "text": "y", "image_url": None},
-        platforms=["facebook"],
+        targets=["test_facebook_main"],
         module_name="test",
     )
 

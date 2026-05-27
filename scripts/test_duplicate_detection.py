@@ -12,6 +12,15 @@ sys.path.insert(0, ROOT)
 
 os.environ.setdefault("PUBLISH_MODE", "mock")
 os.environ.setdefault("STORE_DB_PATH", os.path.join(ROOT, "data", "db", "contentpilot_test.db"))
+os.environ.setdefault("SOCIAL_TARGETS", "test_facebook_main")
+os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__PLATFORM", "facebook")
+os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__ENABLED", "true")
+os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__PAGE_ID", "mock_page_123")
+os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__ACCESS_TOKEN", "mock_token_xyz")
+
+_store_db_path = os.environ["STORE_DB_PATH"]
+if os.path.exists(_store_db_path):
+    os.remove(_store_db_path)
 
 from shared.logging import configure_logging, get_logger
 from shared.store import (
@@ -43,18 +52,19 @@ def test_duplicate_prevention() -> None:
     content = "Duplicate test post content"
     content_hash = compute_content_hash(content)
 
-    assert not already_published(content_hash, "facebook")
+    assert not already_published(content_hash, "test_facebook_main")
 
     record_publish(
         content_hash=content_hash,
+        target_key="test_facebook_main",
         platform="facebook",
         module_name="test",
         status="success",
         external_post_id="fb_test_001",
     )
 
-    assert already_published(content_hash, "facebook")
-    assert not already_published(content_hash, "instagram")
+    assert already_published(content_hash, "test_facebook_main")
+    assert not already_published(content_hash, "test_instagram_main")
     print("PASS\n")
 
 
@@ -68,10 +78,10 @@ def test_full_pipeline_dedup() -> None:
         "image_url": None,
     }
 
-    s1 = publish_post(content=content, platforms=["facebook"], module_name="test")
+    s1 = publish_post(content=content, targets=["test_facebook_main"], module_name="test")
     assert s1.results[0].success
 
-    s2 = publish_post(content=content, platforms=["facebook"], module_name="test")
+    s2 = publish_post(content=content, targets=["test_facebook_main"], module_name="test")
     assert s2.results[0].success
     assert s2.results[0].metadata.get("duplicate") is True
     print("PASS\n")

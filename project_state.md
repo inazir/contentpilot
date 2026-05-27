@@ -173,6 +173,26 @@ Current architecture status:
 - First containerized module operational
 - Production reliability layer operational
 - System now supports persistent state tracking across container runs
+
+## Phase 5 — Named Social Targets (COMPLETED): 27.05.2026 07:00
+
+### Goal
+Enable per-page/account publishing by using named social targets instead
+of a single global page/account setting per platform.
+
+### What was implemented
+- Added `SocialTarget` model and `load_social_targets()` in `shared/config.py`
+- Reworked `shared/social/publisher.py` to publish by target key instead of platform name
+- Updated Facebook and Instagram adapters to accept a `SocialTarget` object
+- Changed `shared/store.py` to deduplicate by `target_key` instead of `platform`
+- Updated `modules/daily_news/runner.py` to use `DAILY_NEWS_TARGETS` from env
+- Updated environment docs and `.env.example` for per-target configuration
+
+### Testing results
+- Mock publish flow validated with named targets
+- Duplicate prevention works per target
+- Invalid/unknown target handling is safe and does not crash the runner
+
 #### 2026-05-26 (15:00)
 ## Phase 3 — Social Publishing Layer (COMPLETED - Core Wiring)
 

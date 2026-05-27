@@ -1,5 +1,6 @@
 # modules/daily_news/runner.py
 import argparse
+import os
 import sys
 
 # Allow running as: python -m modules.daily_news.runner
@@ -7,7 +8,8 @@ sys.path.insert(0, "/app")
 
 from shared.logging import configure_logging, get_logger
 from shared.store import init_db
-from shared.social import publish_post, get_publish_mode
+from shared.config import get_publish_mode
+from shared.social import publish_post
 from generator import generate_news_post
 
 configure_logging()
@@ -21,7 +23,9 @@ DEFAULT_TOPICS = [
     "filing taxes in Germany for the first time",
 ]
 
-_PLATFORMS = ["facebook", "instagram"]
+# Read publishing targets from env, comma-separated
+# Example: DAILY_NEWS_TARGETS=gs_facebook_main,gs_instagram_main
+_TARGETS = [t.strip() for t in os.getenv("DAILY_NEWS_TARGETS", "").split(",") if t.strip()]
 
 
 def main() -> None:
@@ -74,7 +78,7 @@ def main() -> None:
             "text": post_text,
             "image_url": None,
         },
-        platforms=_PLATFORMS,
+        targets=_TARGETS,
         module_name="daily_news",
     )
 
@@ -84,9 +88,9 @@ def main() -> None:
 
     if summary.failed:
         logger.warning(
-            "%d platform(s) failed",
+            "%d target(s) failed",
             len(summary.failed),
-            extra={"failed_platforms": [r.platform for r in summary.failed]},
+            extra={"failed_targets": [r.platform for r in summary.failed]},
         )
 
 

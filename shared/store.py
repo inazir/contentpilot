@@ -39,13 +39,14 @@ def init_db() -> None:
         CREATE TABLE IF NOT EXISTS publish_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content_hash TEXT NOT NULL,
+            target_key TEXT NOT NULL,
             platform TEXT NOT NULL,
             module_name TEXT NOT NULL,
             status TEXT NOT NULL,
             external_post_id TEXT,
             error_message TEXT,
             published_at TEXT NOT NULL,
-            UNIQUE(content_hash, platform)
+            UNIQUE(content_hash, target_key)
         )
         """
     )
@@ -58,15 +59,15 @@ def compute_content_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def already_published(content_hash: str, platform: str) -> bool:
+def already_published(content_hash: str, target_key: str) -> bool:
     conn = _connect()
     row = conn.execute(
         """
         SELECT id FROM publish_history
-        WHERE content_hash = ? AND platform = ? AND status = 'success'
+        WHERE content_hash = ? AND target_key = ? AND status = 'success'
         LIMIT 1
         """,
-        (content_hash, platform),
+        (content_hash, target_key),
     ).fetchone()
     conn.close()
     return row is not None
@@ -74,6 +75,7 @@ def already_published(content_hash: str, platform: str) -> bool:
 
 def record_publish(
     content_hash: str,
+    target_key: str,
     platform: str,
     module_name: str,
     status: str,
@@ -84,11 +86,12 @@ def record_publish(
     conn.execute(
         """
         INSERT OR REPLACE INTO publish_history
-            (content_hash, platform, module_name, status, external_post_id, error_message, published_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+            (content_hash, target_key, platform, module_name, status, external_post_id, error_message, published_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             content_hash,
+            target_key,
             platform,
             module_name,
             status,

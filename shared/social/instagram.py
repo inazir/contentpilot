@@ -1,52 +1,53 @@
 """
-Instagram publisher — mock implementation.
+Instagram publisher — mock only for now.
 
-Real implementation will replace the mock block only.
-Interface stays identical.
+Adapter contract:
+    publish_post(content, target, image_url, mode) -> PublishResult
 """
 
 import logging
 import uuid
 
+from shared.config import SocialTarget
 from .exceptions import ValidationError
+from .models import PublishResult
 
 logger = logging.getLogger(__name__)
 
 
-def publish(content: dict, mode: str) -> tuple[bool, str | None, str | None]:
-    """
-    Publish content to Instagram.
+def publish_post(
+    content: str,
+    target: SocialTarget,
+    image_url: str | None = None,
+    mode: str = "mock",
+) -> PublishResult:
+    if not content.strip():
+        raise ValidationError("content is empty", platform="instagram")
 
-    Args:
-        content: {
-            "title":     str,
-            "text":      str,
-            "image_url": str | None
-        }
-        mode: "mock" or "real"
-
-    Returns:
-        (success, external_post_id, error_message)
-    """
-    text = content.get("text", "").strip()
-    if not text:
-        raise ValidationError("text is empty", platform="instagram")
-
-    if not content.get("image_url"):
+    if not image_url:
         logger.warning(
-            "Instagram publish has no image_url — real API will reject this"
+            "Instagram publish called without image_url — real API will reject this | target=%s",
+            target.key,
         )
 
     if mode == "real":
         raise NotImplementedError(
-            "Instagram real API not implemented yet. Set PUBLISH_MODE=mock."
+            "Instagram real publishing not implemented yet. "
+            "Set PUBLISH_MODE=mock or target.enabled=false."
         )
 
+    return _mock_publish(content, target, image_url)
+
+
+def _mock_publish(content: str, target: SocialTarget, image_url: str | None) -> PublishResult:
     fake_id = f"ig_mock_{uuid.uuid4().hex[:10]}"
-    logger.info(
-        "Instagram mock publish | post_id=%s | text_length=%d | has_image=%s",
-        fake_id,
-        len(text),
-        content.get("image_url") is not None,
+    logger.debug(
+        "Instagram mock publish | target=%s | post_id=%s | content_length=%d | has_image=%s",
+        target.key, fake_id, len(content), image_url is not None,
     )
-    return True, fake_id, None
+    return PublishResult(
+        platform="instagram",
+        success=True,
+        external_post_id=fake_id,
+        metadata={"mode": "mock", "target": target.key},
+    )
