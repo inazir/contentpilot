@@ -22,6 +22,7 @@ __pycache__/
 data/db/*
 data/cache/*
 data/logs/*
+data/backups/*
 
 # But keep the directories themselves tracked by Git via their .gitkeep files
 !data/db/.gitkeep
@@ -29,4 +30,5 @@ data/logs/*
 !data/logs/.gitkeep
 !data/locks/.gitkeep
 !data/runtime/.gitkeep
+!data/backups/.gitkeep
 

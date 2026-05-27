@@ -16,19 +16,23 @@ sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, "/app")
 
 from shared.logging import configure_logging, get_logger
+from shared.models import ExecutionSummary
 from shared.runtime import managed_run
 from shared.notify import notify_failure
 
-configure_logging()
+configure_logging(module_name="daily_news")
 logger = get_logger("daily_news.main")
 
 
-def run(args: list[str]) -> int:
-    """Run the existing runner module and return an exit code."""
+def run(args: list[str]) -> ExecutionSummary:
+    """Run the existing runner module and return an ExecutionSummary."""
     sys.argv = ["runner.py"] + args
     import runner
-    runner.main()
-    return 0
+
+    summary = runner.main()
+    if summary is None:
+        summary = ExecutionSummary(module="daily_news")
+    return summary
 
 
 if __name__ == "__main__":
@@ -36,7 +40,9 @@ if __name__ == "__main__":
 
     try:
         with managed_run("daily_news") as ctx:
-            run(args)
+            summary = run(args)
+            ctx.publish_count = summary.published
+            summary.log_summary(logger)
     except SystemExit as exc:
         code = int(exc.code) if exc.code is not None else 1
         if code != 0:

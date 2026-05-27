@@ -2,16 +2,27 @@
 """
 Structured logging for ContentPilot.
 
+Writes to:
+  - stdout (always)
+  - data/logs/<module>.log (rotating, when LOG_FILE_ENABLED=true)
+
 Usage:
     from shared.logging import configure_logging, get_logger
-    configure_logging()
+    configure_logging(module_name="daily_news")
     logger = get_logger(__name__)
 """
 
 import logging
+import logging.handlers
 import os
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
+
+
+_LOG_DIR = "/app/data/logs"
+_MAX_BYTES = 5 * 1024 * 1024
+_BACKUP_COUNT = 5
 
 
 class StructuredFormatter(logging.Formatter):
@@ -43,7 +54,10 @@ class StructuredFormatter(logging.Formatter):
         return " | ".join(parts)
 
 
-def configure_logging(level: str | None = None) -> None:
+def configure_logging(
+    module_name: str | None = None,
+    level: str | None = None,
+) -> None:
     if logging.root.handlers:
         return
 
@@ -53,11 +67,35 @@ def configure_logging(level: str | None = None) -> None:
         logging.INFO,
     )
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(StructuredFormatter())
+    formatter = StructuredFormatter()
+
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(formatter)
+    handlers = [stdout_handler]
+
+    file_enabled = os.getenv("LOG_FILE_ENABLED", "true").strip().lower() in {"1", "true", "yes"}
+    if file_enabled and module_name:
+        log_dir = Path(os.getenv("LOG_DIR", _LOG_DIR))
+        try:
+            log_dir.mkdir(parents=True, exist_ok=True)
+            log_path = log_dir / f"{module_name}.log"
+            file_handler = logging.handlers.RotatingFileHandler(
+                filename=str(log_path),
+                maxBytes=_MAX_BYTES,
+                backupCount=_BACKUP_COUNT,
+                encoding="utf-8",
+            )
+            file_handler.setFormatter(formatter)
+            handlers.append(file_handler)
+        except Exception as exc:
+            print(
+                f"WARNING: Could not configure file logging to {log_dir}: {exc}",
+                file=sys.stderr,
+            )
 
     logging.root.setLevel(log_level)
-    logging.root.addHandler(handler)
+    for handler in handlers:
+        logging.root.addHandler(handler)
 
 
 def get_logger(name: str) -> logging.Logger:

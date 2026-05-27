@@ -3,7 +3,7 @@
 
 # ContentPilot — Current Project State
 
-Last Updated: 2026-05-27 07:55 UTC
+Last Updated: 2026-05-27 11:24 UTC
 
 ---
 
@@ -225,6 +225,36 @@ Add a reusable runtime execution layer with locking, metadata tracking, notifica
 - Runtime lock acquisition and stale lock cleanup validated
 - Runtime metadata persisted correctly for success and failure cases
 - Failure handling releases locks and records failed run state
+
+## Phase 6.5 — Stabilization Layer (COMPLETE)
+
+### Goal
+Add observability and operational hygiene before Phase 7 RSS ingestion so live feed problems are diagnosable instead of mysterious.
+
+### What was implemented
+- Added rotating file logging to `shared/logging.py`
+  - Writes to `data/logs/<module>.log`
+  - Controlled by `LOG_FILE_ENABLED` and `LOG_DIR`
+  - Keeps 5 rotated files at 5MB each
+- Added `shared/models.py` with `ExecutionSummary`
+  - Standardizes module run outputs
+  - Tracks: duration, generated posts, published posts, duplicates skipped, failures, dry_run, completed_at
+- Updated `modules/daily_news/main.py` and `modules/daily_news/runner.py`
+  - `daily_news.main` now logs an `ExecutionSummary`
+  - `runner.main()` now returns the summary object
+- Added `scripts/healthcheck.py`
+  - Verifies DB, locks/logs writeability, disk space, required env vars, Facebook config, AI reachability
+- Added `scripts/backup_db.sh`
+  - Creates timestamped gzipped SQLite backups
+  - Prunes old backups via `BACKUP_KEEP_DAYS`
+- Added `data/backups/` and preserved it with `.gitkeep`
+- Added `LOG_FILE_ENABLED`, `LOG_DIR`, `BACKUP_DIR`, and `BACKUP_KEEP_DAYS` environment config
+
+### Testing results
+- Execution summary logging is available for end-of-run diagnostics
+- Healthcheck script enables preflight validation of runtime environment
+- Backup script enables safe DB snapshots for operational debugging
+- No existing module behavior was changed during this stabilization step
 
 #### 2026-05-26 (15:00)
 ## Phase 3 — Social Publishing Layer (COMPLETED - Core Wiring)

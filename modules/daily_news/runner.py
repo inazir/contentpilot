@@ -7,12 +7,13 @@ import sys
 sys.path.insert(0, "/app")
 
 from shared.logging import configure_logging, get_logger
+from shared.models import ExecutionSummary
 from shared.store import init_db
 from shared.config import get_publish_mode
 from shared.social import publish_post
 from generator import generate_news_post
 
-configure_logging()
+configure_logging(module_name="daily_news")
 logger = get_logger("daily_news")
 
 DEFAULT_TOPICS = [
@@ -28,7 +29,7 @@ DEFAULT_TOPICS = [
 _TARGETS = [t.strip() for t in os.getenv("DAILY_NEWS_TARGETS", "").split(",") if t.strip()]
 
 
-def main() -> None:
+def main() -> ExecutionSummary:
     parser = argparse.ArgumentParser(description="Daily News Post Generator")
     parser.add_argument(
         "--dry-run",
@@ -46,6 +47,8 @@ def main() -> None:
     import random
     topic = args.topic or random.choice(DEFAULT_TOPICS)
 
+    summary = ExecutionSummary(module="daily_news", dry_run=args.dry_run)
+
     init_db()
     logger.info(
         "Starting daily_news run",
@@ -58,9 +61,11 @@ def main() -> None:
 
     try:
         post_text = generate_news_post(topic)
+        summary.posts_generated = 1
     except Exception as exc:
         logger.error("Content generation failed", extra={"error": str(exc)})
-        sys.exit(1)
+        summary.failures = 1
+        return summary
 
     print("\n" + "=" * 60)
     print("GENERATED POST:")
@@ -70,9 +75,9 @@ def main() -> None:
 
     if args.dry_run:
         logger.info("Dry-run enabled — skipping publishing")
-        return
+        return summary
 
-    summary = publish_post(
+    publish_summary = publish_post(
         content={
             "title": topic,
             "text": post_text,
@@ -82,16 +87,25 @@ def main() -> None:
         module_name="daily_news",
     )
 
-    logger.info(str(summary))
-    for result in summary.results:
+    logger.info(str(publish_summary))
+    for result in publish_summary.results:
         logger.info(str(result))
+        if result.success:
+            if result.metadata.get("duplicate"):
+                summary.duplicates_skipped += 1
+            else:
+                summary.published += 1
+        else:
+            summary.failures += 1
 
-    if summary.failed:
+    if publish_summary.failed:
         logger.warning(
             "%d target(s) failed",
-            len(summary.failed),
-            extra={"failed_targets": [r.platform for r in summary.failed]},
+            len(publish_summary.failed),
+            extra={"failed_targets": [r.platform for r in publish_summary.failed]},
         )
+
+    return summary
 
 
 if __name__ == "__main__":
