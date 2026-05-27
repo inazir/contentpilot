@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements/dev.txt ]; then pip install -r requirements/dev.txt || true; fi
+          if [ -f requirements/base.txt ]; then pip install -r requirements/base.txt; fi
 
       - name: Run test scripts
         env:

@@ -1,0 +1,7 @@
+# Core dependencies for ContentPilot
+
+# HTTP client (used by AI clients and Telegram notifications)
+requests>=2.31.0
+
+# Anthropic API client
+anthropic>=0.25.0
