@@ -4,11 +4,13 @@
 Simulates failure conditions without needing real credentials.
 """
 import sys
-sys.path.insert(0, "/app")
-
 import os
-os.environ["PUBLISH_MODE"]              = "real"
-os.environ["STORE_DB_PATH"]             = "/tmp/test_cp_fail.db"
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+os.environ["PUBLISH_MODE"] = "real"
+os.environ["STORE_DB_PATH"] = str(ROOT / "data" / "db" / "contentpilot_fail_test.db")
 
 # Setup targets with bad credentials
 os.environ["SOCIAL_TARGETS"] = "test_facebook_bad"

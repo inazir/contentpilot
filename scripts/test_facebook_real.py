@@ -7,11 +7,13 @@ Requires FACEBOOK_PAGE_ID and FACEBOOK_PAGE_ACCESS_TOKEN to be set in .env.
 Run only when you want to verify real API connectivity.
 """
 import sys
-sys.path.insert(0, "/app")
-
 import os
-os.environ["PUBLISH_MODE"]     = "real"
-os.environ["STORE_DB_PATH"]    = "/tmp/test_cp_real.db"
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+os.environ["PUBLISH_MODE"] = "real"
+os.environ["STORE_DB_PATH"] = str(ROOT / "data" / "db" / "contentpilot_real_test.db")
 
 from shared.logging import configure_logging, get_logger
 from shared.store import init_db

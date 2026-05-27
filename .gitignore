@@ -27,4 +27,6 @@ data/logs/*
 !data/db/.gitkeep
 !data/cache/.gitkeep
 !data/logs/.gitkeep
+!data/locks/.gitkeep
+!data/runtime/.gitkeep
 

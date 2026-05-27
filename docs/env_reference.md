@@ -4,6 +4,16 @@
 |---|---|---|---|
 | `PUBLISH_MODE` | `disabled` `mock` `real` | `disabled` | Controls publish behavior globally |
 
+## Runtime / Scheduler
+
+| Variable | Values | Default | Description |
+|---|---|---|---|
+| `RUNTIME_DB_PATH` | filesystem path | `/app/data/db/contentpilot.db` | SQLite DB path used for runtime metadata and job tracking |
+| `NOTIFY_ON_FAIL` | `true` `false` | `false` | Send failure notifications when a job fails |
+| `NOTIFY_EMAIL_TO` | email address | | Email recipient for failure alerts |
+| `TELEGRAM_BOT_TOKEN` | Bot API token | | Telegram bot token for notifications |
+| `TELEGRAM_CHAT_ID` | chat ID | | Telegram chat ID for notifications |
+
 ## Social Targets
 
 | Variable | Values | Default | Description |

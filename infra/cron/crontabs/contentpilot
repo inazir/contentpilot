@@ -1,0 +1,19 @@
+# ContentPilot — master crontab
+# Install on host: crontab -e (as the user that owns the repo)
+# Or: crontab /path/to/repo/infra/cron/crontabs/contentpilot
+#
+# All jobs run through run_job.sh which handles:
+#   locking, logging, failure notification, duration tracking
+#
+# REPO_ROOT must match your VPS path.
+
+REPO_ROOT=/home/youruser/repos/contentpilot
+NOTIFY_ON_FAIL=true
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# daily_news — every hour at minute 0
+0 * * * *  $REPO_ROOT/scripts/run_job.sh daily_news >> $REPO_ROOT/data/runtime/cron.log 2>&1
+
+# dry-run smoke test — daily at 06:00 UTC (optional, safe to remove)
+0 6 * * *  $REPO_ROOT/scripts/run_job.sh daily_news --dry-run >> $REPO_ROOT/data/runtime/cron.log 2>&1

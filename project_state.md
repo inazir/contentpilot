@@ -3,7 +3,7 @@
 
 # ContentPilot — Current Project State
 
-Last Updated: 2026-05-25
+Last Updated: 2026-05-27 07:55 UTC
 
 ---
 
@@ -192,6 +192,39 @@ of a single global page/account setting per platform.
 - Mock publish flow validated with named targets
 - Duplicate prevention works per target
 - Invalid/unknown target handling is safe and does not crash the runner
+
+## Phase 6 — Scheduler + Automation Runtime Layer
+
+### Goal
+Add a reusable runtime execution layer with locking, metadata tracking, notification support, and cron-friendly execution so modules can be scheduled safely from cron or manual execution.
+
+### What was implemented
+- Added `shared/runtime.py` with managed run lifecycle, file locking, stale-lock cleanup, and runtime metadata persistence.
+- Added `shared/notify.py` for email and Telegram failure notifications.
+- Added `scripts/run_job.sh` as a reusable launcher for cron or manual execution.
+- Added `modules/daily_news/main.py` as a standardized module entrypoint using `managed_run()`.
+- Added cron example files under `infra/cron/crontabs/`.
+- Added `data/locks/` and `data/runtime/` directories for runtime state.
+- Added CI-friendly non-real runtime test scripts in `scripts/`.
+
+### Testing and validation
+- Runtime lock, metadata, and failure behavior were validated with isolated test scripts.
+- Publish pipeline, duplicate detection, and mock publish tests were updated to be environment-independent.
+- A GitHub Actions workflow now runs the core non-real test scripts automatically on push/PR.
+
+### What was implemented
+- Added `shared/runtime.py` for file-based locking and runtime metadata tracking
+- Added `shared/notify.py` for email and Telegram failure notification support
+- Added standardized module entrypoint `modules/daily_news/main.py`
+- Added `scripts/run_job.sh` as the universal job launcher for cron and manual runs
+- Added `infra/cron/crontabs/contentpilot` as the master cron schedule
+- Added runtime test coverage for lock behavior, metadata tracking, and failure handling
+- Added `data/locks/` and `data/runtime/` as bind-mounted runtime directories
+
+### Testing results
+- Runtime lock acquisition and stale lock cleanup validated
+- Runtime metadata persisted correctly for success and failure cases
+- Failure handling releases locks and records failed run state
 
 #### 2026-05-26 (15:00)
 ## Phase 3 — Social Publishing Layer (COMPLETED - Core Wiring)

@@ -15,4 +15,4 @@ COPY scripts/ /app/scripts/
 
 WORKDIR /app/module
 
-CMD ["python", "runner.py"]
+CMD ["python", "main.py"]

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 # scripts/test_facebook_mock.py
 import sys
-sys.path.insert(0, "/app")
-
 import os
+import tempfile
+from pathlib import Path
+
+# Use repository root for imports and isolated temp DB for tests
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 # Setup mock targets
-os.environ["PUBLISH_MODE"]       = "mock"
-os.environ["STORE_DB_PATH"]      = "/tmp/test_cp_mock.db"
-
-# Remove stale test database before startup
-_store_db_path = os.environ["STORE_DB_PATH"]
-if os.path.exists(_store_db_path):
-    os.remove(_store_db_path)
+os.environ["PUBLISH_MODE"] = "mock"
+tmpdir = tempfile.mkdtemp(prefix="cp_test_")
+os.environ["STORE_DB_PATH"] = str(Path(tmpdir) / "contentpilot_test.db")
 
 # Define mock targets
 os.environ["SOCIAL_TARGETS"] = "test_facebook_main"

@@ -6,17 +6,18 @@ Lightweight duplicate detection tests for ContentPilot.
 
 import os
 import sys
+from pathlib import Path
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
-os.environ.setdefault("PUBLISH_MODE", "mock")
-os.environ.setdefault("STORE_DB_PATH", os.path.join(ROOT, "data", "db", "contentpilot_test.db"))
-os.environ.setdefault("SOCIAL_TARGETS", "test_facebook_main")
-os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__PLATFORM", "facebook")
-os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__ENABLED", "true")
-os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__PAGE_ID", "mock_page_123")
-os.environ.setdefault("SOCIAL__TEST_FACEBOOK_MAIN__ACCESS_TOKEN", "mock_token_xyz")
+os.environ["PUBLISH_MODE"] = "mock"
+os.environ["STORE_DB_PATH"] = str(ROOT / "data" / "db" / "contentpilot_test.db")
+os.environ["SOCIAL_TARGETS"] = "test_facebook_main"
+os.environ["SOCIAL__TEST_FACEBOOK_MAIN__PLATFORM"] = "facebook"
+os.environ["SOCIAL__TEST_FACEBOOK_MAIN__ENABLED"] = "true"
+os.environ["SOCIAL__TEST_FACEBOOK_MAIN__PAGE_ID"] = "mock_page_123"
+os.environ["SOCIAL__TEST_FACEBOOK_MAIN__ACCESS_TOKEN"] = "mock_token_xyz"
 
 _store_db_path = os.environ["STORE_DB_PATH"]
 if os.path.exists(_store_db_path):
