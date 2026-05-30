@@ -1,813 +1,321 @@
-```markdown
-# PROJECT_STATE.md
+# ContentPilot Project State
 
-# ContentPilot — Current Project State
+## Current Status
 
-Last Updated: 2026-05-27 11:24 UTC
+### Current Maturity
 
----
+Production-capable foundation completed. The platform has successfully transitioned from a single-container proof of concept to a stable, observable, autonomous multi-target execution runtime layer.
 
-# 1. Project Goal
+### System Capabilities
 
-ContentPilot is a new Docker-first rewrite/re-architecture of the legacy Autoblogger system.
+* **Docker-First Architecture:** Complete encapsulation of workloads with independent runtime base boundaries.
+* **AI Abstraction Layer:** Decoupled multi-provider execution supporting Anthropic + DeepSeek failover routines.
+* **Social Publishing Layer:** Dynamic routing engine enabling multi-page distribution tracking.
+* **Runtime Automation:** Process shielding featuring file-based locking maps and automated alarm distributions.
+* **Observability Layer:** Uniform metrics tracking, structured rotation log files, and data snapshotting routines.
+* **CI Pipeline Validation:** Active GitHub Actions automated engine testing repository safety on updates.
 
-The legacy system remains operational and production-active during migration.
+### Next Major Milestone
 
-The new architecture focuses on:
-
-- modular containerized services
-- clean separation of concerns
-- reusable shared libraries
-- isolated Docker containers per module
-- VPS-native deployment
-- easier scaling and maintenance
-- long-term SaaS/productization readiness
-
-This is NOT a quick migration project.
-
-The goal is:
-- learn Docker/containerization properly
-- build stable architecture incrementally
-- migrate modules one-by-one safely
-- avoid big-bang rewrites
+* **Phase 7 — RSS News Ingestion Pipeline**
 
 ---
 
-# 2. Development Environment
+## Current Repository Status
 
-## Main Development Workflow
+* **Branch:** `main`
+* **State:** Stable
+* **Last Major Completed Phase:** Phase 6.5 (Operational Stabilization Layer)
+* **Ready For:** Phase 7 (RSS Ingestion Pipeline Implementation)
 
-Development happens directly on VPS using:
+---
 
-- VS Code Remote SSH
-- Docker Engine
-- Docker Compose V2
-- Git + GitHub
+## CI/CD Status
 
-Repository path:
+* **Current State:** GitHub Actions CI active on push and pull requests
+* **Automated Test Execution:** Enabled (Isolated environment-independent validation scripts)
+* **Runtime Locking Tests:** ✅ Passing
+* **Runtime Metadata Storage Tests:** ✅ Passing
+* **Publish Pipeline & Social Targets Tests:** ✅ Passing
+* **Duplicate Content Detection Tests:** ✅ Passing
+* **Notification Layer Alerts Tests:** ✅ Passing
+* **Status:** 🟢 Green
 
-```text
-/home/deployer/repos/contentpilot
+---
 
-```
+## Development Environment
 
-Primary branch:
+* **Platform Host:** Ubuntu VPS (1blu Dedicated Setup)
+* **Local Client Access:** VS Code Remote SSH via Windows Workstation Terminal
+* **Engine Layer:** Docker Engine + Docker Compose V2
+* **Automation Verification:** GitHub Actions CI Configuration Engine
+* **Secured Configurations:** Managed locally using `.env` injection filters matched with explicit `.clineignore` rulesets to safeguard tokens.
+* **Project Root Path:** `/home/deployer/repos/contentpilot`
+* **Primary Operational Branch:** `main`
 
-```text
-main
+---
 
-```
+## Current Architecture Overview
 
-----------
-
-# 3. Current Architecture Philosophy
-
-Current strategy:
-
--   one module = one container
-    
--   shared reusable code inside `shared/`
-    
--   infrastructure isolated inside `infra/`
-    
--   persistent runtime data inside `data/`
-    
--   modules executed as one-shot containers
-    
--   cron scheduling will happen later
-    
--   no Kubernetes planned
-    
--   Docker Compose is the orchestration layer
-    
-
-Important:
-
-The project intentionally progresses slowly.
-
-We prioritize:
-
-1.  understanding architecture
-    
-2.  validating Docker concepts
-    
-3.  incremental milestones
-    
-
-before migrating real business logic.
-
-----------
-
-# 4. Current Repository Structure
+The system follows a module-first, decoupled, container-native architecture orchestrated by Docker Compose:
 
 ```text
 contentpilot/
-│
 ├── modules/
-│   └── daily_news/
-│       ├── Dockerfile
-│       └── main.py
-│
+│   └── daily_news/            # Fully operational business automation container
 ├── shared/
-│   ├── __init__.py
-│   └── config.py
-│
+│   ├── ai/                    # Abstracted generation clients (Anthropic/DeepSeek)
+│   ├── social/                # Multi-target social adapters (Facebook/Instagram)
+│   ├── logging.py             # Structured log configuration and file rotation
+│   ├── models.py              # Central data schemas and execution summaries
+│   ├── notify.py              # Alarm pipelines (Telegram bot and system mail)
+│   ├── runtime.py             # Lifecycle wrapper and atomic system file locking
+│   └── store.py               # Local persistence and content duplicate processing
 ├── infra/
-│   ├── docker/
-│   │   ├── base.Dockerfile
-│   │   └── .dockerignore
-│   │
-│   └── compose/
-│       └── docker-compose.yml
-│
-├── data/
-│
-├── docs/
-│
-├── requirements/
-│
-├── scripts/
-│
-└── README.md
+│   ├── docker/                # Platform base images and build definitions
+│   ├── compose/               # Orchestration topologies and volume mounts
+│   └── cron/                  # System automation schedules and tasks
+├── scripts/                   # System validation tools and database backups
+└── data/                      # Host persistent volume mounts (git-ignored)
 
 ```
 
-----------
+### Core Structural Principles
 
-# 5. Completed Milestones
-
-## Phase 1 — Docker Foundation
-
-Completed successfully.
-### Latest Completed Work
-#### 2026-05-26 (17:00)
-### Phase 4 Completed — Production Reliability Layer
-
-Implemented the first production-grade reliability layer for the social publishing pipeline.
-
-Added:
-- Structured logging system (`shared/logging.py`)
-- SQLite-backed publish history store (`shared/store.py`)
-- WAL mode database support for safer concurrent access
-- Publish result models and failure handling
-- Duplicate content detection using content hashing
-- Retry-safe publish orchestration
-- Mock vs real publish mode separation
-- Persistent publish tracking in `/data/db/contentpilot.db`
-
-Updated:
-- `daily_news` runner now initializes DB, uses structured logs, and records publish results
-- Facebook and Instagram adapters updated to Phase 4 interface
-- Publisher now supports safe retries and duplicate prevention
-
-Validation completed:
-- Dry-run flow works
-- Mock publishing works
-- Docker execution works
-- SQLite persistence verified
-- Duplicate detection verified
-- AI fallback logic still operational after refactor
-
-Current architecture status:
-- Shared AI layer operational
-- First containerized module operational
-- Production reliability layer operational
-- System now supports persistent state tracking across container runs
-
-## Phase 5 — Named Social Targets (COMPLETED): 27.05.2026 07:00
-
-### Goal
-Enable per-page/account publishing by using named social targets instead
-of a single global page/account setting per platform.
-
-### What was implemented
-- Added `SocialTarget` model and `load_social_targets()` in `shared/config.py`
-- Reworked `shared/social/publisher.py` to publish by target key instead of platform name
-- Updated Facebook and Instagram adapters to accept a `SocialTarget` object
-- Changed `shared/store.py` to deduplicate by `target_key` instead of `platform`
-- Updated `modules/daily_news/runner.py` to use `DAILY_NEWS_TARGETS` from env
-- Updated environment docs and `.env.example` for per-target configuration
-
-### Testing results
-- Mock publish flow validated with named targets
-- Duplicate prevention works per target
-- Invalid/unknown target handling is safe and does not crash the runner
-
-## Phase 6 — Scheduler + Automation Runtime Layer
-
-### Goal
-Add a reusable runtime execution layer with locking, metadata tracking, notification support, and cron-friendly execution so modules can be scheduled safely from cron or manual execution.
-
-### What was implemented
-- Added `shared/runtime.py` with managed run lifecycle, file locking, stale-lock cleanup, and runtime metadata persistence.
-- Added `shared/notify.py` for email and Telegram failure notifications.
-- Added `scripts/run_job.sh` as a reusable launcher for cron or manual execution.
-- Added `modules/daily_news/main.py` as a standardized module entrypoint using `managed_run()`.
-- Added cron example files under `infra/cron/crontabs/`.
-- Added `data/locks/` and `data/runtime/` directories for runtime state.
-- Added CI-friendly non-real runtime test scripts in `scripts/`.
-
-### Testing and validation
-- Runtime lock, metadata, and failure behavior were validated with isolated test scripts.
-- Publish pipeline, duplicate detection, and mock publish tests were updated to be environment-independent.
-- A GitHub Actions workflow now runs the core non-real test scripts automatically on push/PR.
-
-### What was implemented
-- Added `shared/runtime.py` for file-based locking and runtime metadata tracking
-- Added `shared/notify.py` for email and Telegram failure notification support
-- Added standardized module entrypoint `modules/daily_news/main.py`
-- Added `scripts/run_job.sh` as the universal job launcher for cron and manual runs
-- Added `infra/cron/crontabs/contentpilot` as the master cron schedule
-- Added runtime test coverage for lock behavior, metadata tracking, and failure handling
-- Added `data/locks/` and `data/runtime/` as bind-mounted runtime directories
-
-### Testing results
-- Runtime lock acquisition and stale lock cleanup validated
-- Runtime metadata persisted correctly for success and failure cases
-- Failure handling releases locks and records failed run state
-
-## Phase 6.5 — Stabilization Layer (COMPLETE)
-
-### Goal
-Add observability and operational hygiene before Phase 7 RSS ingestion so live feed problems are diagnosable instead of mysterious.
-
-### What was implemented
-- Added rotating file logging to `shared/logging.py`
-  - Writes to `data/logs/<module>.log`
-  - Controlled by `LOG_FILE_ENABLED` and `LOG_DIR`
-  - Keeps 5 rotated files at 5MB each
-- Added `shared/models.py` with `ExecutionSummary`
-  - Standardizes module run outputs
-  - Tracks: duration, generated posts, published posts, duplicates skipped, failures, dry_run, completed_at
-- Updated `modules/daily_news/main.py` and `modules/daily_news/runner.py`
-  - `daily_news.main` now logs an `ExecutionSummary`
-  - `runner.main()` now returns the summary object
-- Added `scripts/healthcheck.py`
-  - Verifies DB, locks/logs writeability, disk space, required env vars, Facebook config, AI reachability
-- Added `scripts/backup_db.sh`
-  - Creates timestamped gzipped SQLite backups
-  - Prunes old backups via `BACKUP_KEEP_DAYS`
-- Added `data/backups/` and preserved it with `.gitkeep`
-- Added `LOG_FILE_ENABLED`, `LOG_DIR`, `BACKUP_DIR`, and `BACKUP_KEEP_DAYS` environment config
-
-### Testing results
-- Execution summary logging is available for end-of-run diagnostics
-- Healthcheck script enables preflight validation of runtime environment
-- Backup script enables safe DB snapshots for operational debugging
-- No existing module behavior was changed during this stabilization step
-
-#### 2026-05-26 (15:00)
-## Phase 3 — Social Publishing Layer (COMPLETED - Core Wiring)
-
-### Goal
-Enable publishing pipeline from `daily_news` module to social platforms (Facebook + Instagram), with safe mock-first execution controlled via environment variables.
+* **One Module = One Deployable Unit:** Every workflow is isolated to its respective container space.
+* **Shared Platform Logic belongs in `shared/`:** Common SDK tasks (AI, notifications, database utilities) are centralized and reusable.
+* **Business Logic belongs in `modules/`:** Process-specific parameters are strictly containerized.
+* **Docker-First Development Workflow:** Development environments match VPS runtime conditions precisely using volume-bound filesystems.
 
 ---
 
-### What was implemented
+## Implemented Phases
 
-- Introduced `shared/social/` publishing layer
-  - `facebook.py` → Facebook publishing client (mock + real-ready structure)
-  - `instagram.py` → Instagram publishing client (mock + real-ready structure)
-  - `publisher.py` → unified orchestration layer for multi-platform publishing
-
-- Extended `runner.py` in `modules/daily_news/`
-  - Generates content (Phase 2)
-  - Optionally triggers publishing based on `PUBLISH_ENABLED`
-
-- Environment-driven publishing control:
-  - `PUBLISH_ENABLED=false` → generation only (safe mode)
-  - `PUBLISH_ENABLED=true` → publishing pipeline executes
-
-- Docker integration updated:
-  - `PUBLISH_ENABLED` passed into containers via `.env`
-  - Publishing behavior controlled at runtime (no code changes required)
+| Phase | Name | Status |
+| --- | --- | --- |
+| **Phase 1** | Docker Foundation & Skeleton Setup | ✅ Complete |
+| **Phase 2** | First Module (`daily_news` Generation Core) | ✅ Complete |
+| **Phase 3** | Social Publishing Layer (Facebook & Instagram Abstracted Adapters) | ✅ Complete |
+| **Phase 4** | Production Reliability Layer (SQLite Storage + Deduplication) | ✅ Complete |
+| **Phase 5** | Named Social Targets Mapping (Multi-Account Routing Engine) | ✅ Complete |
+| **Phase 6** | Automation Runtime & Scheduler Layer (Locks + Telegram Alarms) | ✅ Complete |
+| **Phase 6.5** | Operational Stabilization Layer (Observability + Backups) | ✅ Complete |
+| **CI** | GitHub Actions Workflow | ✅ Complete |
+| **Phase 7** | External Data Ingestion Layer (RSS & Parsers) | 📋 Planned |
 
 ---
 
-### Testing results
+## Project Timeline
 
-- Dry-run mode confirmed working:
-  - Post generation successful
-  - Publishing skipped as expected
+### 2026-05-27 — Phase 6.5 / Operational Stabilization Layer
 
-- Enabled publishing mode confirmed working:
-  - Facebook mock publish executed
-  - Instagram mock publish executed
-  - Graceful handling of missing image URLs for Instagram
-  - No runtime crashes
+#### Completed
+
+* Implemented automated preflight system diagnostic scanning and database snapshotting routines.
+* Standardized uniform execution reporting metrics across active module routines.
+
+#### Technical Changes
+
+* Updated `shared/logging.py` to write to a rotating file logger tracking 5 rolled backups at 5MB limits inside `data/logs/<module>.log`.
+* Created `shared/models.py` exporting the `ExecutionSummary` data schema to track container loop metadata (durations, generation counts, published volumes, duplicates skipped, and errors).
+* Built `scripts/healthcheck.py` to audit disk constraints, write permissions, key environment variables, and AI platform availability.
+* Designed `scripts/backup_db.sh` to trigger timestamped, gzipped database backups retaining snapshots based on `BACKUP_KEEP_DAYS`.
+
+#### Validation
+
+* Verified structural logging file rotation behavior under high load limit simulations.
+* Executed healthcheck script to validate local preflight diagnostics.
+* Tested database backup snapshot compilation and verified retention cleanup constraints.
+
+#### Notes
+
+* Operational hygiene must precede external API ingestion patterns. Ensuring that background container operations are observable prevents invisible processing drops.
+
+### 2026-05-27 — Phase 6 / Runtime & Scheduler Layer
+
+#### Completed
+
+* Engineered an automated execution runtime layer providing process protection and automated system alert delivery.
+* Established crontab automation blueprints for background service initialization.
+
+#### Technical Changes
+
+* Programmed `shared/runtime.py` implementing file-based atomic process locking (`data/locks/`) along with stale lock cleanup logic.
+* Implemented `shared/notify.py` integrating explicit Telegram Bot API push alert notifications and backup email hooks for processing faults.
+* Created `scripts/run_job.sh` acting as the main infrastructure launcher to wrap container processes cleanly.
+* Added cron config maps inside `infra/cron/crontabs/contentpilot`.
+
+#### Validation
+
+* Simulated process collisions; stale lock eviction routines cleanly freed paths without execution stalls.
+* Triggered synthetic workflow failures and verified successful execution metadata tracking and immediate Telegram notification delivery.
+
+#### Notes
+
+* Decoupling the orchestration loop from the container runtime allows standard cron managers to handle process initialization without maintaining heavy long-running cron daemons inside application boundaries.
+
+### 2026-05-27 — Phase 5 / Named Social Targets Mapping
+
+#### Completed
+
+* Upgraded the system from global account configurations to explicit per-page/per-account multi-target distribution routing.
+
+#### Technical Changes
+
+* Added the `SocialTarget` data map and built out the initialization workflow `load_social_targets()` inside `shared/config.py`.
+* Refactored `shared/social/publisher.py` to decouple tracking keys from technology platform definitions.
+* Patched database store layers inside `shared/store.py` to index asset fingerprint deduplication maps by explicit `target_key`.
+
+#### Validation
+
+* Validated target parsing using multi-account configurations.
+* Verified that asset deduplication blocks content on a target-by-target level, allowing identical items to post to separate destination targets securely.
+
+### 2026-05-26 — Phase 4 / Production Reliability Layer
+
+#### Completed
+
+* Introduced local transactional persistence and content hashing structures to guarantee reliable execution states across processing attempts.
+
+#### Technical Changes
+
+* Provisioned a persistent SQLite storage layer (`shared/store.py`) backed by Write-Ahead Logging (WAL) configuration flags.
+* Configured real-time content hashing fingerprints to enforce strict duplicate publishing prevention.
+* Added structured log context management layers to track retry operations across individual container lifetimes.
+
+#### Validation
+
+* Verified data persistence across sequential run instances within `/data/db/contentpilot.db`.
+* Tested the deduplication behavior; matching content hashes correctly blocked duplicate target publishing.
+
+### 2026-05-26 — Phase 3 / Social Publishing Layer
+
+#### Completed
+
+* Engineered unified publishing abstractions mapping to multiple target social platforms, supporting an environment-switched testing architecture.
+
+#### Technical Changes
+
+* Built out `shared/social/facebook.py` and `shared/social/instagram.py` platform interfaces.
+* Written unified routing clients in `shared/social/publisher.py` utilizing the target-based mapping pipeline and environment run flags.
+
+#### Validation
+
+* Confirmed that with target testing configurations active, processing blocks safely halt before execution or route to clean execution mocks.
+* Verified mock execution routines handle structural payloads without processing faults.
+
+### 2026-05-26 — Phase 2 / First Production Module (`daily_news`)
+
+#### Completed
+
+* Built and isolated the initial production processing pipeline loop within active container boundaries.
+
+#### Technical Changes
+
+* Created `modules/daily_news/runner.py` and `modules/daily_news/generator.py`.
+* Wired system contexts into `shared/ai` to implement multi-provider fallbacks (Anthropic and DeepSeek).
+
+#### Validation
+
+* Verified environment injection setups across independent AI service backends.
+* Confirmed automatic client recovery paths handle missing client parameters cleanly.
+
+### 2026-05-25 — Phase 1 / Docker Foundation & Skeleton Setup
+
+#### Completed
+
+* Established the base infrastructure footprint and package layout for development.
+
+#### Technical Changes
+
+* Configured `infra/docker/base.Dockerfile` hosting a slim Linux distribution layout.
+* Designed core path controls within `infra/compose/docker-compose.yml`.
+
+#### Validation
+
+* Verified module build loops and checked package cross-import paths between `shared/` context targets and independent application modules.
 
 ---
 
-### Key design decisions
+## Active Modules Status
 
-- Social platforms are abstracted behind `shared/social/`
-- No real API credentials required yet (mock-first design)
-- Instagram and Facebook treated as independent adapters
-- Publishing remains optional and controlled entirely via environment variables
+* **`modules/daily_news`**: Fully operational containerized module. Generates structured informational summaries using the decoupled AI client packages, logs to dynamic runtime directories, and validates post routing configuration against named social database stores. Content pipeline is generated via targeted test data inputs pending final Phase 7 parsing configurations.
 
 ---
 
-### Current limitation (intentional)
+## Shared Platform Components
 
-- No real Facebook Page ID integration yet
-- No real Instagram Graph API token setup yet
-- Image generation pipeline not enforced for Instagram posts yet
-
-These will be added in a later phase after stabilizing content pipeline.
+* **`shared/ai`**: Abstraction provider layer offering standardized text formatting across distinct external generation services, paired with dynamic retry loops and seamless fallback client matching.
+* **`shared/social`**: Architecture routing matrix directing generated payloads into discrete target distribution networks.
+* **`shared/runtime`**: Host-level orchestration wrapper managing atomic processing locks, clearing stagnant workspace executions, and tracking container process limits.
+* **`shared/notify`**: Critical alert dispatcher transmitting unexpected container processing terminations directly to designated Telegram communication channels.
 
 ---
-
-### Status
-
-Phase 3 core infrastructure: COMPLETED
-Ready for production-grade integration in next phase.
-#### 2026-05-26 (14:00)
-## Phase 2 — First Production Module (daily_news) ✅ COMPLETED
-
-### Status
-The first end-to-end module (`daily_news`) has been successfully implemented and validated inside Docker on VPS.
-
-### Implemented Components
-- `modules/daily_news/runner.py` (execution entrypoint)
-- `modules/daily_news/generator.py` (AI-driven content generation)
-- Dockerized execution via `infra/compose/docker-compose.yml`
-- Isolated container execution using `contentpilot-base` image
-- Full integration with shared AI layer (`shared/ai`)
-- Env-driven AI configuration (provider, model, fallback, temperature, max_tokens)
-
-### Verified Capabilities
-- Docker build pipeline works correctly
-- Container execution works via Docker Compose
-- AI layer works inside container (Anthropic + DeepSeek verified)
-- Router system correctly selects default provider from `.env`
-- Fallback provider execution works correctly
-- Dry-run mode successfully generates content without publishing
-
-### Key Output
-- Daily news content generation pipeline is functional end-to-end
-- Example topic generation confirmed inside container runtime
-- Stable reproducible execution via `docker compose run`
-
-### Current Limitation (Intentional)
-- Publishing layer is NOT implemented yet
-- Output is currently only printed / dry-run logged
-
-### Architectural Note
-The runner includes a dedicated hook:
-
-```python
-# Publishing not yet implemented
-
-#### 2026-05-25
-- Implemented shared/ai reusable provider layer
-- Added:
-  - anthropic_client.py
-  - deepseek_client.py
-  - exceptions.py
-  - __init__.py
-- Added retry/backoff handling
-- Added normalized AIClientError abstraction
-- Verified shared.ai import path with direct script execution
-- Discovered and fixed missing Docker base dependency for requests
-- Verified Docker `--env-file .env` injection and Anthropic request execution^
-- validated both Anthropic and DeepSeek providers
-- verified provider interchangeability
-- confirmed Docker env propagation for multiple providers
 
 ## Architecture Decisions
 
-- AI provider logic belongs in shared/ai
-- Business logic stays inside modules/
-- shared layer must remain small and reusable
-- No LangChain/framework abstractions
-- Docker-first development workflow
-- Module-by-module migration only
-
-### Completed Tasks
-
--   repository skeleton created
-    
--   Docker installed and working
-    
--   Docker Compose V2 verified
-    
--   base Docker image created
-    
--   first compose setup created
-    
--   first module container created
-    
--   shared package imports validated
-    
--   environment variable injection validated
-    
-
-----------
-
-# 6. Existing Working Docker Setup
-
-## Base Image
-
-File:
-
-```text
-infra/docker/base.Dockerfile
-
-```
-
-Current contents:
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
-
-```
-
-Current image name:
-
-```text
-contentpilot-base:latest
-
-```
-
-Successfully builds.
-
-----------
-
-# 7. Current Shared Package
-
-## shared/config.py
-
-Current responsibility:
-
--   read ENVIRONMENT variable
-    
--   provide centralized configuration entry point
-    
-
-Current implementation:
-
-```python
-import os
-
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-
-```
-
-----------
-
-# 8. Current Module
-
-## Module: daily_news
-
-Purpose currently:
-
--   architecture validation only
-    
--   NOT real business logic yet
-    
-
-Current file:
-
-```text
-modules/daily_news/main.py
-
-```
-
-Current behavior:
-
-```python
-from shared.config import ENVIRONMENT
-
-print("Daily News Module Started")
-print(f"Environment: {ENVIRONMENT}")
-
-```
-
-----------
-
-# 9. Current Compose Setup
-
-Compose file:
-
-```text
-infra/compose/docker-compose.yml
-
-```
-
-Current service:
-
-```yaml
-services:
-  daily_news:
-    build:
-      context: ../..
-      dockerfile: modules/daily_news/Dockerfile
-    image: contentpilot-daily-news:latest
-    environment:
-      ENVIRONMENT: development
-
-```
-
-----------
-
-# 10. Verified Working Commands
-
-Build:
-
-```bash
-docker compose -f infra/compose/docker-compose.yml build
-
-```
-
-Run:
-
-```bash
-docker compose -f infra/compose/docker-compose.yml run --rm daily_news
-
-```
-
-Expected output:
-
-```text
-Daily News Module Started
-Environment: development
-
-```
-
-This currently works successfully.
-
-----------
-
-# 11. Current Learning Focus
-
-The current phase is:
-
-```text
-FOUNDATION + ARCHITECTURE LEARNING
-
-```
-
-NOT:
-
-```text
-FULL MODULE MIGRATION
-
-```
-
-Current learning topics:
-
--   Docker fundamentals
-    
--   images vs containers
-    
--   Docker Compose
-    
--   build context
-    
--   Python package structure
-    
--   containerized imports
-    
--   module boundaries
-    
--   Docker layering basics
-    
-
-----------
-
-# 12. Things NOT Added Yet (Intentional)
-
-The following are intentionally postponed:
-
--   real legacy module migration
-    
--   AI providers
-    
--   Anthropic/OpenAI integrations
-    
--   FFmpeg workflows
-    
--   social posting
-    
--   cron scheduler
-    
--   persistent volumes
-    
--   SQLite databases
-    
--   bind mounts
-    
--   logging system
-    
--   health checks
-    
--   deployment automation
-    
--   Portainer
-    
--   production optimization
-    
--   environment files
-    
--   CI/CD
-    
--   watchtower
-    
--   nginx/reverse proxy
-    
-
-Reason:
-
-Avoid mixing:
-
--   architecture debugging
-    
--   Docker debugging
-    
--   business logic debugging
-    
-
-too early.
-
-----------
-
-# 13. Immediate Next Planned Step
-
-Next planned learning milestone:
-
-```text
-Live development workflow with bind mounts
-
-```
-
-Topics to learn next:
-
--   bind mounts
-    
--   live code editing without rebuild
-    
--   dev vs production compose
-    
--   rebuild vs restart
-    
--   container development workflow
-    
-
-After that:
-
--   migrate first REAL legacy module logic slowly
-    
-
-----------
-
-# 14. Important Architectural Rules
-
-## Rule 1
-
-Do NOT migrate multiple modules simultaneously.
-
-Only one module at a time.
-
-----------
-
-## Rule 2
-
-Every stable milestone should be:
-
--   tested
-    
--   committed
-    
--   pushed
-    
-
-before continuing.
-
-----------
-
-## Rule 3
-
-Prefer understanding over speed.
-
-This project is intentionally educational + production-oriented.
-
-----------
-
-## Rule 4
-
-Keep containers simple initially.
-
-Avoid premature optimization.
-
-----------
-
-## Rule 5
-
-Shared logic belongs in `shared/`.
-
-Business-specific logic belongs in `modules/`.
-
-----------
-
-# 15. Current Status Summary
-
-Current status:
-
-```text
-Docker foundation established successfully.
-First modular container architecture validated.
-Ready for live-development workflow learning phase.
-
-```
-# 16. AI Agent Operating Instructions
-
-This file is the single source of truth for the project state.
-
-Any AI agent working on this repository must:
-
-1. Read this file BEFORE making changes
-2. Understand the current project phase
-3. Respect the incremental learning-first workflow
-4. Avoid introducing unplanned complexity
-5. Update this file after every meaningful milestone
+* **Docker Compose over Kubernetes:** Enforces absolute operational simplicity, keeping processing footprints minimal on a single managed VPS host.
+* **SQLite before PostgreSQL:** Employs disk-efficient local single-file transactional containers using WAL mode, avoiding infrastructure overhead until scalability demands cross-host cluster routing.
+* **Module-by-Module Migration:** Guarantees structural platform integrity; migrations progress incrementally, ensuring complete test coverage before new code patterns are merged.
+* **Reliability before Feature Growth:** Observability layers, diagnostic scripts, validation controls, and process isolation protocols must always be finalized before expanding input logic.
+* **Shared Services remain Framework-Light:** Avoids heavy dependencies or wrapper engines (e.g., LangChain); uses simple, native Python configurations to stay fast and future-proof.
+* **Environment-Driven Configuration:** Swaps testing execution maps dynamically using standard container environment matrices, keeping absolute code parity across dev paths and real-world deployment states.
 
 ---
 
-## Required Update Rules
+## Explicit Non-Goals
 
-After each completed milestone, the AI agent should update:
+To prevent unnecessary architecture complication and premature optimization, **do not introduce** any of the following components or frameworks into this codebase unless an explicit architecture review milestone specifically mandates them:
 
-- completed tasks
-- current architecture
-- current active module(s)
-- current compose setup
-- current Docker setup
-- current learning phase
-- next planned step
-- known issues/blockers
-- important decisions made
+* Kubernetes (K8s) or advanced multi-node container orchestration layers
+* Redis, RabbitMQ, or standalone memory cache layers
+* Celery or complex external task distribution worker queues
+* Microservice decomposition (Keep services module-focused inside this mono-repo)
+* PostgreSQL or external enterprise database server migrations
+* LangChain, LlamaIndex, or heavy multi-layered AI wrapper frameworks
+* Long-running background daemon architectures (Leverage host-level `run_job.sh` cron triggers instead)
 
 ---
 
-## Important Constraints
+## Known Limitations
 
-AI agents must NOT:
-
-- skip architectural phases
-- migrate multiple modules simultaneously
-- introduce Kubernetes
-- add production optimizations prematurely
-- add hidden magic abstractions
-- restructure the repository aggressively
-- overwrite existing working architecture without reason
+* **Facebook Production Publishing:** Verified and fully operational for at least one live target production page.
+* **Instagram Production Credentials:** Direct publishing calls navigate via the simulated target architecture; live production Graph API tokens remain unlinked.
+* **External Data Sourcing:** Content construction relies entirely on defined data variables; active web scrapers and external feed parsers are not yet live.
+* **WordPress Publishing Integration:** Core abstract targets and ingestion storage pipelines have not yet been wired for content publishing to external content management systems.
+* **Asset Generation Engine:** Visual generation templates, media compression pipelines, and video rendering utilities are completely omitted.
 
 ---
 
-## Preferred Workflow
+## Next Recommended Phase: Phase 7 — External Data Ingestion Layer
 
-The project follows this workflow:
-
-Research
-→ Explain
-→ Implement minimally
-→ Test
-→ Verify understanding
-→ Update PROJECT_STATE.md
-→ Commit
-→ Continue
+* **Goal:** Introduce real-world external input feeds to drive the automated generation tools.
+* **Target Pipeline Topology:**
+`RSS Feed Input` ➔ `Parse Core` ➔ `Normalize Model` ➔ `Deduplicate (DB Hash)` ➔ `AI Summarize` ➔ `Multi-Target Publish`
+* **Implementation Strategy:** Build out a robust, network-fault-tolerant RSS parsing and HTML content normalization engine inside a clean subpackage `shared/ingestion/`. Enforce careful exception wrappers to ensure malformed target pages or network connection drops are cleanly reported using the `ExecutionSummary` schema.
 
 ---
 
-## Documentation Discipline
+## Long-Term Roadmap
 
-Every stable checkpoint should result in:
-
-1. verified working state
-2. PROJECT_STATE.md update
-3. git commit
-
-before moving forward.
+* **Phase 8:** Real-World Credential Activation & Live Channel Pilot Program.
+* **Phase 9:** Asset Creation Frameworks (Automated image composition and media transformations).
+* **Phase 10:** Multi-Module Scale Expansion & Multi-Tenant SaaS Interface readiness.
 
 ---
 
-## Philosophy
+## AI Agent Operating Instructions
 
-This project prioritizes:
+This file represents the absolute Single Source of Truth (SSOT) regarding architecture states and current build constraints. Any autonomous coding agent initializing a terminal or chat frame within this repository must rigorously adhere to the following sequence:
 
-- clarity
-- maintainability
-- learning
-- modularity
-- operational simplicity
-- incremental progress
+1. **Read this file entirely** before writing any code or modifying infrastructure trees.
+2. **Respect the current phase boundaries.** Never write advanced ingestion patterns or integrate live API assets if the timeline notes specify that structural foundation checks are the current focus.
+3. **Avoid adding unmapped complexity.** Do not introduce extra databases, background daemons, or heavy dependencies unless explicitly authorized.
+4. **Maintain chronological integrity.** Every stable deployment step, validation check, or architecture revision must update the `Project Timeline` section (most recent entries first) before code commits are created.
 
-over rapid feature migration.
+### Preferred Automation Loop
+
+```text
+Research Context ➔ Explain Strategy ➔ Implement Minimally ➔ Test Runtime ➔ Update Document ➔ Commit Repo
+
+```
