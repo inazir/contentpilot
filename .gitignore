@@ -32,3 +32,6 @@ data/backups/*
 !data/runtime/.gitkeep
 !data/backups/.gitkeep
 
+# Local AI Agent plugins and skill configurations
+.agents/
+skills-lock.json
