@@ -113,3 +113,40 @@ def get_db_path() -> str:
 
 def get_log_level() -> str:
     return os.getenv("LOG_LEVEL", "INFO").strip().upper()
+
+# shared/config_wordpress_addition.py
+#
+# INSTRUCTIONS: Add the contents of this file to the BOTTOM of shared/config.py
+# Do NOT replace shared/config.py — append this block only.
+#
+# ---------------------------------------------------------------------------
+# WordPress
+# ---------------------------------------------------------------------------
+
+def get_wordpress_config() -> "WordPressConfig":
+    """
+    Build WordPressConfig from environment variables.
+    Raises ValueError if required credentials are missing.
+    """
+    from shared.wordpress.models import WordPressConfig
+
+    base_url     = os.getenv("WORDPRESS_BASE_URL", "").strip()
+    username     = os.getenv("WORDPRESS_USERNAME", "").strip()
+    app_password = os.getenv("WORDPRESS_APP_PASSWORD", "").strip()
+
+    if not base_url:
+        raise ValueError("WORDPRESS_BASE_URL is not set")
+    if not username or not app_password:
+        raise ValueError(
+            "WORDPRESS_USERNAME and WORDPRESS_APP_PASSWORD must both be set"
+        )
+
+    return WordPressConfig(
+        base_url        = base_url,
+        username        = username,
+        app_password    = app_password,
+        default_status  = os.getenv("WORDPRESS_DEFAULT_STATUS", "draft").strip().lower(),
+        timeout_seconds = int(os.getenv("WORDPRESS_TIMEOUT_SECONDS", "30")),
+        max_retries     = int(os.getenv("WORDPRESS_MAX_RETRIES", "3")),
+    )
+

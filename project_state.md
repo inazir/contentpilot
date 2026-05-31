@@ -4,11 +4,13 @@
 
 ### Current Maturity
 
-Production-capable foundation completed. The platform has successfully transitioned from a proof-of-concept automation system into a stable, observable, containerized content automation platform.
+Production-capable publishing platform foundation completed.
 
-The core runtime, publishing, ingestion, deduplication, monitoring, and operational safety layers are now in place.
+The platform has successfully transitioned from a proof-of-concept automation system into a stable, observable, containerized content automation platform with both social publishing and WordPress publishing infrastructure.
 
-The project is currently entering its first controlled production pilot stage.
+Core runtime, ingestion, AI generation, deduplication, social publishing, WordPress publishing, monitoring, and operational safety layers are now in place.
+
+The project is currently entering its first controlled multi-channel publishing pilot stage.
 
 ---
 
@@ -41,13 +43,28 @@ The project is currently entering its first controlled production pilot stage.
 
 ### Publishing
 
+#### Social Publishing
+
 * Facebook publishing
+* Instagram publishing framework
 * Named social target routing
 * Publisher-level duplicate protection
 * Safe mode / live mode publishing controls
 * Per-target enable/disable controls
 * Publish audit logging
 * Execution publish limits
+
+#### WordPress Publishing
+
+* WordPress REST API integration
+* Draft publishing
+* Live publishing
+* Categories support
+* Tags support
+* Featured image support
+* Structured publish result tracking
+* Reusable publishing interface
+* Retry-aware publishing client
 
 ### Reliability
 
@@ -67,8 +84,8 @@ The project is currently entering its first controlled production pilot stage.
 
 * Branch: `main`
 * State: Stable
-* Current Milestone: Phase 8 Complete
-* Ready For: Phase 9 (WordPress Publishing Layer)
+* Current Milestone: Phase 9 Complete
+* Ready For: Phase 10 (Media & Asset Generation Layer)
 
 ---
 
@@ -86,6 +103,7 @@ Validated:
 * Duplicate detection tests ✅
 * RSS ingestion tests ✅
 * Notification tests ✅
+* WordPress publishing tests ✅
 
 All known automated validation pipelines are currently passing.
 
@@ -116,6 +134,7 @@ contentpilot/
 ├── shared/
 │   ├── ai/
 │   ├── social/
+│   ├── wordpress/
 │   ├── ingestion/
 │   ├── runtime.py
 │   ├── store.py
@@ -183,10 +202,86 @@ contentpilot/
 | Phase 6.5 | Observability & Operational Stabilization    | ✅ Complete |
 | Phase 7   | RSS Ingestion Pipeline                       | ✅ Complete |
 | Phase 8   | Live Pilot Hardening & Credential Activation | ✅ Complete |
+| Phase 9   | WordPress Publishing Layer                   | ✅ Complete |
 
 ---
 
 # Project Timeline
+
+## 2026-05-31 — Phase 9 / WordPress Publishing Layer
+
+### Completed
+
+* Introduced reusable WordPress publishing framework.
+* Added WordPress REST API integration.
+* Added draft publishing support.
+* Added live publishing support.
+* Added categories and tags support.
+* Added featured image support.
+* Added structured publish result tracking.
+* Added retry-aware publishing client.
+* Added WordPress-specific validation and logging.
+
+### Technical Changes
+
+Created:
+
+```text
+shared/wordpress/
+├── __init__.py
+├── client.py
+└── models.py
+```
+
+Added:
+
+* WordPress client abstraction
+* WordPress REST API integration
+* Publish request models
+* Publish response models
+* Draft publishing workflow
+* Live publishing workflow
+* Retry handling
+* Structured publish results
+
+#### Configuration
+
+Updated:
+
+```text
+.env.example
+```
+
+Added:
+
+```text
+WORDPRESS_BASE_URL=
+WORDPRESS_USERNAME=
+WORDPRESS_APP_PASSWORD=
+WORDPRESS_DEFAULT_STATUS=draft
+WORDPRESS_TIMEOUT_SECONDS=30
+```
+
+### Validation
+
+Verified:
+
+* WordPress authentication
+* Draft creation
+* Published post creation
+* Response parsing
+* Retry handling
+* Failure handling
+* Structured logging
+
+### Notes
+
+* No database schema changes required
+* No ingestion architecture changes required
+* No module architecture changes required
+* WordPress layer remains fully reusable and module-agnostic
+
+---
 
 ## 2026-05-31 — Phase 8 / Live Pilot Hardening & Credential Activation
 
@@ -326,6 +421,7 @@ Capabilities:
 * Topic fallback generation
 * AI summarization
 * Facebook publishing
+* WordPress publishing
 * Deduplication
 * Safe mode publishing
 * Live mode publishing
@@ -353,6 +449,18 @@ Provides:
 * Instagram adapter
 * Publish safety controls
 * Duplicate protection
+
+### shared/wordpress
+
+Provides:
+
+* WordPress REST API integration
+* Draft publishing
+* Live publishing
+* Categories and tags support
+* Featured image support
+* Publish result tracking
+* Retry-aware publishing
 
 ### shared/ingestion
 
@@ -463,6 +571,14 @@ Operational safety and observability are prioritized before introducing new busi
 
 Avoid heavy framework dependencies.
 
+### WordPress As Output Adapter
+
+WordPress remains a publishing destination only.
+
+AI generation and publishing remain intentionally decoupled.
+
+This allows future modules to reuse the same WordPress layer without modification.
+
 ---
 
 ## Known Limitations
@@ -470,10 +586,6 @@ Avoid heavy framework dependencies.
 ### Social Publishing
 
 * Instagram live production publishing not fully validated
-
-### Content Destinations
-
-* WordPress publishing not yet implemented
 
 ### Media
 
@@ -484,46 +596,46 @@ Avoid heavy framework dependencies.
 
 Only `daily_news` is currently production-ready.
 
+### User-Driven Content Creation
+
+* Article request workflow not yet implemented
+* Article generation dashboard not yet implemented
+* Multi-user content management not yet implemented
+
 ---
 
 ## Next Major Milestone
 
-# Phase 9 — WordPress Publishing Layer
+# Phase 10 — Media & Asset Generation Layer
 
 ### Goal
 
-Introduce a reusable WordPress publishing framework that enables:
-
-* daily_news publication to WordPress
-* future article_publisher integration
-* future affiliate/deals publishing
+Introduce reusable media generation capabilities for all modules.
 
 ### Planned Components
 
 ```text
-shared/wordpress/
-├── __init__.py
-├── client.py
+shared/media/
+├── image_generation.py
+├── image_sourcing.py
+├── image_processing.py
+├── video_generation.py
 └── models.py
 ```
 
 ### Objectives
 
-* WordPress REST API integration
-* Draft publishing
-* Published article support
-* Categories and tags
-* Featured image support
-* Structured result tracking
-* Shared reusable interface
+* AI image generation
+* Featured image generation
+* Stock image sourcing
+* Image optimization
+* Social image formatting
+* Future video generation support
+* Shared reusable media interface
 
 ---
 
 ## Long-Term Roadmap
-
-### Phase 9
-
-WordPress Publishing Layer
 
 ### Phase 10
 
