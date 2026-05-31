@@ -1,16 +1,19 @@
+````markdown
 # ContentPilot
 
-ContentPilot is a modular, Docker-first AI automation platform for content generation and social publishing.
+ContentPilot is a modular, Docker-first AI automation platform for content generation, content ingestion, and multi-channel publishing.
 
 The platform is designed around isolated business modules, reusable shared services, and lightweight infrastructure suitable for VPS deployment and long-term scaling.
 
 Current focus areas:
 
 * AI-powered content generation
+* RSS/Atom news ingestion
 * Facebook publishing automation
-* Instagram publishing pipeline (mock mode currently)
+* Instagram publishing pipeline (mock/live-ready architecture)
 * Runtime reliability and scheduling
 * Duplicate-safe publishing
+* Publishing safety controls
 * Dockerized execution
 * Modular automation workflows
 
@@ -26,7 +29,7 @@ Core principles:
 * Module isolation
 * Shared reusable services
 * Provider-agnostic AI layer
-* Reliability before feature explosion
+* Reliability before feature expansion
 * Infrastructure simplicity
 * Gradual migration toward production-grade architecture
 
@@ -60,7 +63,7 @@ AI_DEFAULT_PROVIDER=deepseek
 AI_DEFAULT_MODEL=deepseek-chat
 AI_DEFAULT_FALLBACK_PROVIDER=anthropic
 AI_DEFAULT_FALLBACK_MODEL=claude-haiku-4-5
-```
+````
 
 ---
 
@@ -69,18 +72,28 @@ AI_DEFAULT_FALLBACK_MODEL=claude-haiku-4-5
 Implemented:
 
 * Facebook real publishing
-* Instagram mock publishing
+* Instagram publishing architecture
 * Structured publish results
-* Duplicate-safe publishing
-* Multi-target architecture foundations
-* Mock vs real publish modes
+* Multi-target routing
+* Publisher-level duplicate protection
+* Per-target enable/disable controls
+* Publish audit logging
+* Publish rate limiting
+* Live pilot safety controls
 
 Supported modes:
 
 ```env
-PUBLISH_MODE=mock
-PUBLISH_MODE=real
+PUBLISH_MODE=safe
+PUBLISH_MODE=live
 ```
+
+Additional safety controls:
+
+* Disabled targets are skipped automatically
+* Publisher-level deduplication prevents accidental reposts
+* Publish rate limiting protects against bursts
+* Full audit logging of publish decisions
 
 ---
 
@@ -102,18 +115,36 @@ Implemented:
 
 Current capabilities:
 
-* AI-generated content
+* RSS/Atom feed ingestion
+* RSS article deduplication
+* AI summarization
+* AI-generated topic content
 * Dockerized execution
 * Real Facebook publishing
-* Duplicate prevention
+* Topic-level deduplication
+* Publisher-level deduplication
 * Runtime-safe execution
-* **RSS/Atom feed ingestion with deduplication and AI summarization**
-* **Draft mode** — full pipeline without publishing (safe for testing)
-* **Publish mode** — complete pipeline with social posting
+* Draft/safe execution mode
 
-The module now supports two content paths:
-1. **RSS pipeline** — fetches real articles from configured RSS/Atom feeds, deduplicates, summarizes via AI, and publishes
-2. **Fallback topic** — generates content from a static topic when no feeds are configured
+The module supports two content paths:
+
+### RSS Pipeline
+
+```text
+RSS Feed
+→ Normalize
+→ Deduplicate
+→ AI Summarize
+→ Publish
+```
+
+### Fallback Topic Pipeline
+
+```text
+Topic
+→ AI Generate
+→ Publish
+```
 
 ---
 
@@ -129,7 +160,7 @@ scripts/     → operational/testing utilities
 data/        → persistent runtime state
 ```
 
-The architecture intentionally separates:
+The architecture intentionally separates responsibilities:
 
 | Layer    | Responsibility             |
 | -------- | -------------------------- |
@@ -197,10 +228,11 @@ Current shared domains:
 shared/
 ├── ai/
 ├── social/
-├── image/
-├── wordpress/
+├── ingestion/
 ├── logging.py
+├── runtime.py
 ├── store.py
+├── notify.py
 └── config.py
 ```
 
@@ -209,25 +241,31 @@ Rules:
 * Shared code must remain reusable
 * Shared code must not depend on modules
 * Platform-specific logic stays isolated
-* Environment loading centralized
-* Runtime contracts standardized
+* Environment loading is centralized
+* Runtime contracts are standardized
 
 ---
 
 # CI and Testing
 
-A GitHub Actions workflow is configured in `.github/workflows/ci.yml`.
-It runs on `ubuntu-latest` and executes the main non-real test scripts under `PYTHONPATH=.`.
+GitHub Actions CI is configured and active.
 
-Current coverage includes:
+Current automated coverage includes:
 
-* runtime lock and metadata tests
-* mock publish tests
-* duplicate detection tests
-* failure simulation tests
-* publish pipeline end-to-end tests
+* Runtime lock tests
+* Metadata persistence tests
+* Publish pipeline tests
+* Duplicate detection tests
+* Notification tests
+* RSS ingestion tests
 
-For CI-safe runs, the workflow uses `PUBLISH_MODE=mock` and disables external notifications.
+CI-safe runs execute with:
+
+```env
+PUBLISH_MODE=safe
+```
+
+No external publishing occurs during CI execution.
 
 ---
 
@@ -235,7 +273,7 @@ For CI-safe runs, the workflow uses `PUBLISH_MODE=mock` and disables external no
 
 The AI layer is provider-agnostic.
 
-Modules do NOT directly call providers.
+Modules do not directly call providers.
 
 Instead:
 
@@ -250,18 +288,18 @@ Current providers:
 
 Features:
 
-* fallback chains
-* retry handling
-* centralized config
-* typed exceptions
+* Fallback chains
+* Retry handling
+* Centralized configuration
+* Typed exceptions
 * Docker-safe execution
 
 Future plans:
 
-* cost tracking
-* async pipelines
-* provider routing
-* queue-based execution
+* Cost tracking
+* Async pipelines
+* Provider routing
+* Queue-based execution
 
 ---
 
@@ -279,7 +317,7 @@ platform adapter
 external API
 ```
 
-Platform adapters are isolated:
+Platform adapters remain isolated:
 
 ```text
 shared/social/
@@ -291,26 +329,25 @@ shared/social/
 
 Design goals:
 
-* platform-agnostic orchestration
-* typed publish results
-* isolated API communication
-* future extensibility
+* Platform-agnostic orchestration
+* Typed publish results
+* Duplicate-safe publishing
+* Auditable decisions
+* Future extensibility
 
 Planned future platforms:
 
+* LinkedIn
+* X
 * TikTok
 * YouTube Shorts
-* LinkedIn
-* Telegram
 * WordPress
 
 ---
 
 # Runtime Architecture
 
-ContentPilot currently uses a lightweight scheduler model.
-
-Execution flow:
+Current execution model:
 
 ```text
 cron/systemd
@@ -324,12 +361,12 @@ module execution
 
 Features:
 
-* file locking
-* stale lock detection
-* runtime metadata
-* retry-safe execution
-* structured logs
-* failure notifications
+* File locking
+* Stale lock detection
+* Runtime metadata
+* Retry-safe execution
+* Structured logs
+* Failure notifications
 
 ---
 
@@ -348,13 +385,13 @@ infra/
 
 Design principles:
 
-* isolated module containers
-* shared base image
-* bind-mounted persistence
-* minimal VPS dependencies
+* Isolated module containers
+* Shared base image
+* Bind-mounted persistence
+* Minimal VPS dependencies
 * Compose over Kubernetes
 
-The platform intentionally avoids unnecessary orchestration complexity at current scale.
+The platform intentionally avoids unnecessary orchestration complexity.
 
 ---
 
@@ -366,9 +403,10 @@ Current database:
 
 Current usage:
 
-* duplicate detection
-* publish history
-* runtime metadata
+* RSS article deduplication
+* Topic-level deduplication
+* Publish history
+* Runtime metadata
 
 Storage structure:
 
@@ -379,7 +417,7 @@ data/
 └── logs/
 ```
 
-PostgreSQL migration remains possible later.
+Future PostgreSQL migration remains possible.
 
 ---
 
@@ -387,14 +425,17 @@ PostgreSQL migration remains possible later.
 
 Configuration is environment-driven.
 
-No secrets should be hardcoded.
-
-Configuration sources:
+Sources:
 
 * `.env`
 * `shared/config.py`
 
-The platform intentionally centralizes configuration loading to avoid fragmented runtime behavior.
+Rules:
+
+* No hardcoded secrets
+* No hardcoded credentials
+* No environment-specific code
+* Configuration centralized
 
 ---
 
@@ -407,7 +448,7 @@ Local Windows PC
     ↓
 VS Code Remote SSH
     ↓
-VPS development
+Ubuntu VPS
     ↓
 Docker Compose execution
 ```
@@ -416,7 +457,7 @@ Recommended cycle:
 
 ```text
 edit
-→ test locally
+→ test
 → test in Docker
 → commit
 → push
@@ -426,9 +467,7 @@ edit
 
 # Testing Philosophy
 
-The project currently uses lightweight executable test scripts.
-
-Tests live under:
+Tests currently live under:
 
 ```text
 scripts/
@@ -440,55 +479,58 @@ Examples:
 scripts/test_ai.py
 scripts/test_publish_pipeline.py
 scripts/test_runtime_lock.py
+scripts/test_rss_ingestion.py
 ```
 
 Tests should:
 
-* run locally
-* run inside Docker
-* avoid framework complexity
-* remain environment-independent
+* Run locally
+* Run inside Docker
+* Avoid external dependencies
+* Remain environment-independent
 
-Pytest and CI pipelines may be introduced later.
+Future migration to pytest remains possible.
 
 ---
 
 # Current Implemented Phases
 
-| Phase                                   | Status   |
-| --------------------------------------- | -------- |
-| Phase 1 — Skeleton + Docker foundation  | Complete |
-| Phase 2 — First module container        | Complete |
-| Phase 3 — Shared publishing layer       | Complete |
-| Phase 4 — Reliability + persistence     | Complete |
-| Phase 5 — Real Facebook publishing      | Complete |
-| Phase 6 — Runtime + scheduler hardening | Complete |
-| Phase 7 — RSS News Ingestion Pipeline   | Complete |
+| Phase                                                  | Status     |
+| ------------------------------------------------------ | ---------- |
+| Phase 1 — Docker Foundation                            | ✅ Complete |
+| Phase 2 — Daily News Core Module                       | ✅ Complete |
+| Phase 3 — Social Publishing Layer                      | ✅ Complete |
+| Phase 4 — Persistence & Deduplication Foundation       | ✅ Complete |
+| Phase 5 — Named Social Targets Routing                 | ✅ Complete |
+| Phase 6 — Runtime, Scheduler & Alerts                  | ✅ Complete |
+| Phase 6.5 — Observability & Stability Layer            | ✅ Complete |
+| Phase 7 — RSS Ingestion Pipeline                       | ✅ Complete |
+| Phase 8 — Live Pilot Hardening & Credential Activation | ✅ Complete |
 
 ---
 
 # Planned Future Phases
 
-## Phase 8 — Media Pipeline
+## Phase 9 — Media & Asset Generation Layer
 
 Planned:
 
 * AI image generation
-* media hosting
-* Instagram-ready assets
-* ffmpeg workflows
-* video automation
+* Social media visual assets
+* Instagram-ready image workflows
+* Media hosting
+* Automated asset enrichment
 
 ---
 
-## Phase 9 — Multi-Target Distribution
+## Phase 10 — Multi-Module Scale Expansion
 
 Planned:
 
-* multiple Facebook pages
-* multi-brand publishing
-* multilingual distribution
-* advanced scheduling
+* Additional production modules
+* Multi-brand publishing
+* Multi-tenant readiness
+* Distribution scaling
 
 ---
 
@@ -496,69 +538,37 @@ Planned:
 
 The platform intentionally prioritizes:
 
-* maintainability
-* migration safety
-* observability
-* deterministic execution
-* infrastructure simplicity
+* Reliability
+* Maintainability
+* Observability
+* Deterministic execution
+* Infrastructure simplicity
 
-The system evolves incrementally instead of using large-scale rewrites.
-
----
-
-# Important Design Decisions
-
-## Why Docker First?
-
-To guarantee:
-
-* environment consistency
-* deployment portability
-* isolated execution
-* migration flexibility
-
----
-
-## Why Compose Instead of Kubernetes?
-
-Current scale does not justify Kubernetes operational overhead.
-
-Docker Compose provides:
-
-* sufficient isolation
-* portability
-* operational simplicity
-
----
-
-## Why Reliability Before Features?
-
-Automation systems fail operationally before they fail functionally.
-
-The platform therefore prioritized:
-
-* locking
-* persistence
-* retries
-* logging
-* duplicate detection
-
-before expanding feature scope.
+The system evolves incrementally through small, validated improvements rather than large-scale rewrites.
 
 ---
 
 # Current Status
 
-ContentPilot is currently transitioning from:
+ContentPilot has evolved from:
 
 ```text
 AI publishing infrastructure
 ```
 
-toward:
+into:
 
 ```text
-AI content ingestion + distribution platform
+Production-ready AI content ingestion and publishing platform
 ```
 
-The architecture is intentionally designed to support future scaling without requiring major rewrites.
+and is progressing toward:
+
+```text
+Multi-module AI content automation platform
+```
+
+while maintaining a Docker-first, reliability-focused architecture.
+
+```
+```

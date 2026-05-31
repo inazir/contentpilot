@@ -1,79 +1,118 @@
-# 📄 ContentPilot Project State (Updated)
+# 📄 ContentPilot Project State
 
 ## Current Status
 
 ### Current Maturity
 
-Production-capable foundation completed. The platform has successfully transitioned from a single-container proof of concept to a stable, observable, autonomous multi-target execution runtime layer.
+Production-capable foundation completed. The platform has successfully transitioned from a proof-of-concept automation system into a stable, observable, containerized content automation platform.
 
-The system is operational, but still in **active architectural stabilization phase (post-Phase 7 refinement)**.
+The core runtime, publishing, ingestion, deduplication, monitoring, and operational safety layers are now in place.
+
+The project is currently entering its first controlled production pilot stage.
 
 ---
 
 ## System Capabilities
 
-* **Docker-First Architecture:** Fully containerized module execution with isolated runtime boundaries.
-* **AI Abstraction Layer:** Provider-agnostic execution supporting Anthropic and DeepSeek with fallback routing.
-* **Social Publishing Layer:** Multi-target routing with named social destination keys.
-* **Runtime Automation Layer:** Process locking, lifecycle safety guards, and execution tracking.
-* **Observability Layer:** Structured logs, execution summaries, and runtime diagnostics.
-* **CI Pipeline Validation:** GitHub Actions-based automated testing for core workflows.
-* **RSS News Ingestion Pipeline:** Full feed ingestion, normalization, and AI summarization system with deduplication.
+### Infrastructure
 
----
+* Docker-first architecture
+* Containerized module execution
+* Docker Compose orchestration
+* Environment-driven configuration
+* GitHub Actions CI validation
 
-## Next Major Milestone
+### AI Layer
 
-### Phase 8 — Real-World Credential Activation & Live Channel Pilot Program
+* Provider abstraction architecture
+* Anthropic integration
+* DeepSeek integration
+* Automatic provider fallback support
+* Shared AI routing layer
 
-**Goal:** Activate production social media credentials and run controlled live publishing.
+### Content Processing
 
-Pipeline Target:
+* RSS / Atom ingestion
+* Feed normalization
+* Article fingerprinting
+* Deduplication before AI processing
+* AI summarization pipeline
+* Static topic generation fallback
 
-```text
-RSS Feed → Parse → Normalize → Deduplicate → AI Summarize → Multi-Target Publish
-```
+### Publishing
+
+* Facebook publishing
+* Named social target routing
+* Publisher-level duplicate protection
+* Safe mode / live mode publishing controls
+* Per-target enable/disable controls
+* Publish audit logging
+* Execution publish limits
+
+### Reliability
+
+* SQLite persistence
+* WAL-enabled storage
+* Runtime locking
+* Duplicate detection
+* Structured logging
+* Health checks
+* Database backups
+* Telegram notifications
+* Email notifications
 
 ---
 
 ## Current Repository Status
 
-* **Branch:** `main`
-* **State:** Stable (post-Phase 7 stabilization)
-* **Last Completed Phase:** Phase 7 (RSS Ingestion Pipeline + Dedup Stabilization)
-* **Ready For:** Phase 8 (Live Credential Activation)
+* Branch: `main`
+* State: Stable
+* Current Milestone: Phase 8 Complete
+* Ready For: Phase 9 (WordPress Publishing Layer)
 
 ---
 
 ## CI/CD Status
 
-* GitHub Actions CI: Active
-* Automated test execution: Enabled
-* Runtime locking tests: ✅ Passing
-* Metadata storage tests: ✅ Passing
-* Publish pipeline tests: ✅ Passing
-* Duplicate detection tests: ✅ Passing *(after Phase 7 stabilization fixes)*
-* Notification system tests: ✅ Passing
-* Status: 🟢 Green
+### GitHub Actions
+
+Status: 🟢 Green
+
+Validated:
+
+* Runtime locking tests ✅
+* Metadata storage tests ✅
+* Publishing pipeline tests ✅
+* Duplicate detection tests ✅
+* RSS ingestion tests ✅
+* Notification tests ✅
+
+All known automated validation pipelines are currently passing.
 
 ---
 
 ## Development Environment
 
-* Platform Host: Ubuntu VPS (1blu Dedicated Setup)
-* Client Access: VS Code Remote SSH
-* Engine Layer: Docker + Docker Compose V2
-* Runtime Model: Container-per-module execution
-* Config System: Environment-driven `.env` injection
+* Host: Ubuntu VPS (1blu Dedicated Server)
+* Client: VS Code Remote SSH
+* Runtime: Docker Engine + Docker Compose V2
+* Repository Path:
+
+```text
+/home/deployer/repos/contentpilot
+```
+
+* Primary Branch: `main`
 
 ---
 
-## Project Architecture Overview
+## Architecture Overview
 
 ```text
 contentpilot/
 ├── modules/
 │   └── daily_news/
+│
 ├── shared/
 │   ├── ai/
 │   ├── social/
@@ -82,25 +121,52 @@ contentpilot/
 │   ├── store.py
 │   ├── notify.py
 │   ├── logging.py
-│   └── models.py
+│   ├── models.py
+│   └── config.py
+│
 ├── infra/
 │   ├── docker/
 │   ├── compose/
 │   └── cron/
+│
 ├── scripts/
+│
 └── data/
+    ├── db/
+    ├── logs/
+    ├── cache/
+    ├── media/
+    └── exports/
 ```
 
 ---
 
 ## Core Structural Principles
 
+### Module Isolation
+
 * One module = one deployable unit
-* Shared logic lives in `shared/`
-* Business logic lives in `modules/`
-* Docker is the execution baseline
-* No hidden global dependencies
-* Environment-driven configuration only
+* No cross-module dependencies
+* Business logic belongs in modules
+
+### Shared Platform Layer
+
+* Generic reusable functionality only
+* No module-specific assumptions
+* Stable interfaces
+
+### Configuration
+
+* Environment-driven only
+* No hardcoded credentials
+* No embedded secrets
+
+### Reliability
+
+* Idempotent execution
+* Retry-safe processing
+* Observability first
+* Docker-first development
 
 ---
 
@@ -108,148 +174,397 @@ contentpilot/
 
 | Phase     | Name                                         | Status     |
 | --------- | -------------------------------------------- | ---------- |
-| Phase 1   | Docker Foundation                            | ✅ Complete |
+| Phase 1   | Docker Foundation & Skeleton Setup           | ✅ Complete |
 | Phase 2   | Daily News Core Module                       | ✅ Complete |
 | Phase 3   | Social Publishing Layer                      | ✅ Complete |
-| Phase 4   | Persistence + Dedup Foundation               | ✅ Complete |
-| Phase 5   | Named Social Targets Routing                 | ✅ Complete |
-| Phase 6   | Runtime + Scheduler + Alerts                 | ✅ Complete |
-| Phase 6.5 | Observability + Stability Layer              | ✅ Complete |
-| Phase 7   | RSS Ingestion Pipeline + Dedup Stabilization | ✅ Complete |
+| Phase 4   | Persistence & Deduplication Foundation       | ✅ Complete |
+| Phase 5   | Named Social Target Routing                  | ✅ Complete |
+| Phase 6   | Runtime, Scheduler & Alerts                  | ✅ Complete |
+| Phase 6.5 | Observability & Operational Stabilization    | ✅ Complete |
+| Phase 7   | RSS Ingestion Pipeline                       | ✅ Complete |
+| Phase 8   | Live Pilot Hardening & Credential Activation | ✅ Complete |
 
 ---
 
-## Phase 7 Summary (Important)
+# Project Timeline
 
-### Achievements
+## 2026-05-31 — Phase 8 / Live Pilot Hardening & Credential Activation
 
-* Built full RSS/Atom ingestion system
-* Added article fingerprinting (`sha256(title + link)`)
-* Implemented feed merging, normalization, and sorting
-* Introduced `rss_articles` persistence table
-* Integrated AI summarization pipeline
-* Added safe draft mode (no publishing side effects)
-* Built full test suite for ingestion pipeline
+### Completed
 
-### Key Stabilization Fixes During Phase 7
+* Introduced publishing safety controls for production deployment.
+* Added Safe Mode / Live Mode enforcement.
+* Added target-level publishing controls.
+* Added publisher-level duplicate protection verification.
+* Added execution-level publish rate limiting.
+* Improved publishing audit logging.
 
-* Fixed SQLite schema mismatch (`target_key`)
-* Fixed publish_history compatibility issue
-* Stabilized deduplication across publishing pipeline
+### Technical Changes
+
+#### Publishing Safety
+
+Updated:
+
+```text
+shared/social/publisher.py
+```
+
+Added:
+
+* `PUBLISH_MODE=safe|live`
+* per-target enable checks
+* publisher-level duplicate protection
+* publish decision audit logs
+* execution publish limit enforcement
+
+#### Configuration
+
+Updated:
+
+```text
+.env.example
+```
+
+Added:
+
+* `MAX_POSTS_PER_RUN`
+* publish mode documentation
+
+### Validation
+
+Verified:
+
+* Safe mode blocks all real publishing
+* Live mode enables publishing
+* Duplicate content blocked before adapter execution
+* Disabled targets skipped correctly
+* Publish limit enforced
+
+### Notes
+
+* No database schema changes required
+* No runtime architecture changes required
+* No ingestion changes required
 
 ---
 
-## Active Modules Status
+## 2026-05-30 — Phase 7 / RSS News Ingestion Pipeline
 
-### `modules/daily_news`
+### Completed
 
-Fully operational content automation module supporting:
+* Transformed daily_news from static topic generation into a real-news processing pipeline.
+* Implemented reusable RSS/Atom ingestion framework.
+* Added article fingerprinting and deduplication.
+* Added AI summarization of RSS content.
+* Added draft-mode processing safety.
 
-* RSS-driven news ingestion
-* Static topic fallback mode
-* AI-based content generation
-* Multi-target social publishing
-* Deduplication before and after publishing
+### Technical Changes
+
+Created:
+
+```text
+shared/ingestion/
+├── models.py
+├── rss.py
+├── normalizer.py
+└── sources.py
+```
+
+Added:
+
+* RSS article fingerprinting
+* Feed normalization
+* Feed merging
+* Cross-feed deduplication
+* Newest-first sorting
+* Environment-driven feed configuration
+
+Database:
+
+* Added `rss_articles` table
+
+Runner:
+
+* RSS ingestion became primary execution path
+* Static topic fallback preserved
+
+Testing:
+
+* Added 8 ingestion validation tests
+
+### Validation
+
+Verified:
+
+* Live feed retrieval
+* Deduplication
+* Draft mode execution
+* Network failure handling
+* Feed limits
+* Configuration loading
+
+### Stabilization Fixes
+
+Resolved:
+
+* SQLite `target_key` migration issue
+* publish_history compatibility issue
+* RSS deduplication edge cases
+* Topic-level duplicate publishing logic
+
+---
+
+## Active Modules
+
+### modules/daily_news
+
+Status: Production-capable
+
+Capabilities:
+
+* RSS ingestion
+* Topic fallback generation
+* AI summarization
+* Facebook publishing
+* Deduplication
+* Safe mode publishing
+* Live mode publishing
+* Runtime metrics tracking
 
 ---
 
 ## Shared Platform Components
 
-* `shared/ai`: Provider abstraction layer (Anthropic, DeepSeek)
-* `shared/social`: Multi-target publishing system
-* `shared/ingestion`: RSS ingestion framework (reusable across modules)
-* `shared/runtime`: Execution lifecycle + locking system
-* `shared/store`: SQLite persistence + deduplication logic
-* `shared/notify`: Alerting system (Telegram/email)
+### shared/ai
+
+Provides:
+
+* Provider abstraction
+* Anthropic integration
+* DeepSeek integration
+* Fallback execution
+
+### shared/social
+
+Provides:
+
+* Multi-target publishing
+* Facebook adapter
+* Instagram adapter
+* Publish safety controls
+* Duplicate protection
+
+### shared/ingestion
+
+Provides:
+
+* RSS parsing
+* Feed normalization
+* Feed configuration
+* Article fingerprinting
+
+### shared/runtime
+
+Provides:
+
+* Execution lifecycle management
+* File locking
+* Runtime metrics
+
+### shared/store
+
+Provides:
+
+* SQLite persistence
+* Publish history
+* RSS article tracking
+* Duplicate detection
+
+### shared/notify
+
+Provides:
+
+* Telegram notifications
+* Email notifications
+
+---
+
+## Deduplication Model
+
+The platform currently contains two intentionally separate deduplication systems.
+
+### RSS Article Deduplication
+
+Purpose:
+
+Prevent reprocessing identical feed articles.
+
+Fingerprint:
+
+```text
+sha256(title + link)
+```
+
+Storage:
+
+```text
+rss_articles
+```
+
+Scope:
+
+```text
+ingestion layer
+```
+
+---
+
+### Topic-Level Deduplication
+
+Purpose:
+
+Prevent repeated publishing of identical user topics.
+
+Fingerprint:
+
+```text
+hash(normalized topic)
+```
+
+Storage:
+
+```text
+publish_history
+```
+
+Scope:
+
+```text
+publishing layer
+```
 
 ---
 
 ## Architecture Decisions
 
-* Docker Compose chosen over Kubernetes for simplicity and single-host control
-* SQLite chosen before PostgreSQL for lightweight local persistence
-* Modular monorepo structure enforced for long-term scalability
-* No external queues or Redis to avoid premature complexity
-* Environment-driven configuration ensures portability
+### Docker Compose Before Kubernetes
 
----
+Chosen to keep deployment simple and maintainable on a single VPS.
 
-## Deduplication Model (Critical Clarification)
+### SQLite Before PostgreSQL
 
-The system currently uses **two independent deduplication systems**:
+Chosen to minimize operational complexity while maintaining persistence.
 
-### 1. RSS Article Deduplication
+### Reliability Before Features
 
-* Purpose: Prevent reprocessing same RSS articles
-* Key: `sha256(title + link)`
-* Storage: `rss_articles` table
-* Scope: ingestion layer only
+Operational safety and observability are prioritized before introducing new business functionality.
 
----
+### Shared Services Remain Lightweight
 
-### 2. Topic-Level Deduplication (daily_news module)
-
-* Purpose: Prevent repeated publishing of identical topics
-* Key: `hash(normalized topic string)`
-* Storage: `publish_history` table
-* Scope: publishing layer only
-
----
-
-### Important Note
-
-These systems are **intentionally separate** and not yet unified into a global deduplication framework.
-
-This separation ensures:
-
-* ingestion stability
-* publishing flexibility
-* module independence
+Avoid heavy framework dependencies.
 
 ---
 
 ## Known Limitations
 
-* Instagram production publishing not fully wired with live credentials
+### Social Publishing
+
+* Instagram live production publishing not fully validated
+
+### Content Destinations
+
 * WordPress publishing not yet implemented
-* No centralized deduplication abstraction layer (intentional for now)
-* No media generation pipeline yet (images/video not implemented)
+
+### Media
+
+* No image generation pipeline
+* No video generation pipeline
+
+### Multi-Module Expansion
+
+Only `daily_news` is currently production-ready.
 
 ---
 
-## Phase 8 — Next Direction
+## Next Major Milestone
 
-### Real-World Credential Activation
+# Phase 9 — WordPress Publishing Layer
 
-Focus areas:
+### Goal
 
-* Activate production social media credentials
-* Run controlled live publishing tests
-* Add monitoring for real audience interactions
-* Validate cross-platform publishing stability
+Introduce a reusable WordPress publishing framework that enables:
+
+* daily_news publication to WordPress
+* future article_publisher integration
+* future affiliate/deals publishing
+
+### Planned Components
+
+```text
+shared/wordpress/
+├── __init__.py
+├── client.py
+└── models.py
+```
+
+### Objectives
+
+* WordPress REST API integration
+* Draft publishing
+* Published article support
+* Categories and tags
+* Featured image support
+* Structured result tracking
+* Shared reusable interface
 
 ---
 
 ## Long-Term Roadmap
 
-* Phase 8: Live Credential Activation
-* Phase 9: Media + Asset Generation Layer
-* Phase 10: Multi-module scaling + SaaS readiness
+### Phase 9
+
+WordPress Publishing Layer
+
+### Phase 10
+
+Media & Asset Generation Layer
+
+### Phase 11
+
+Multi-Module Expansion
+
+* article_publisher
+* deals_engine
+* social_tips
+* social_video
+
+### Phase 12
+
+Multi-Tenant SaaS Readiness
 
 ---
 
 ## AI Agent Operating Rules
 
-* Read full context before modifying code
-* Maintain module isolation
-* Avoid premature abstraction
-* Prefer minimal, reversible changes
-* Ensure every change is testable in Docker
+Before making changes:
+
+1. Read project state fully.
+2. Respect phase boundaries.
+3. Avoid unnecessary abstractions.
+4. Maintain module isolation.
+5. Test inside Docker.
+6. Update timeline before commit.
 
 ---
 
 ## Preferred Execution Loop
 
 ```text
-Understand → Analyze → Implement Minimal Fix → Test in Docker → Validate → Commit
+Understand
+→ Analyze
+→ Implement Minimal Change
+→ Test in Docker
+→ Validate
+→ Update Documentation
+→ Commit
 ```
