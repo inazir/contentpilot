@@ -2,7 +2,8 @@
 
 | Variable | Values | Default | Description |
 |---|---|---|---|
-| `PUBLISH_MODE` | `disabled` `mock` `real` | `disabled` | Controls publish behavior globally |
+| `PUBLISH_MODE` | `disabled` `mock` `real` | `disabled` | `disabled` = no publishing (safe default). `mock` = full pipeline, fake IDs. `real` = live publishing (activate for pilot). |
+| `MAX_POSTS_PER_RUN` | integer | `10` | Hard cap on posts published per execution run. Stops further publishing once reached. |
 
 ## Runtime / Scheduler
 
