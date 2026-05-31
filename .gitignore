@@ -35,3 +35,8 @@ data/backups/*
 # Local AI Agent plugins and skill configurations
 .agents/
 skills-lock.json
+.clineignore
+.gitignore
+.clineignore
+.clinerules.md
+.clineignore

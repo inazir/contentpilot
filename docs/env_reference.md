@@ -58,6 +58,21 @@ Facebook publishing uses named targets instead of a single global page config. D
 4. Generate a Page Access Token for your Page
 5. Use the Token Debugger to verify it has `pages_manage_posts` permission
 
+## Daily News — Phase 7
+
+| Variable | Values | Default | Description |
+|---|---|---|---|
+| `DAILY_NEWS_MODE` | `draft` `publish` | `draft` | `draft` runs full pipeline without publishing. Always start here. |
+| `DAILY_NEWS_RSS_FEEDS` | comma-separated URLs | _(empty)_ | RSS/Atom feed URLs. If empty, falls back to static topic generation. |
+| `DAILY_NEWS_MAX_ARTICLES` | integer | `10` | Max articles to process per run across all feeds. |
+| `DAILY_NEWS_FEED_TIMEOUT` | integer (seconds) | `10` | Network timeout per feed fetch. |
+
+### Deduplication behavior
+
+Articles are deduplicated by `sha256(title + link)` before any AI call.
+An article processed in `draft` mode will not be reprocessed in a subsequent `publish` run.
+This is intentional: draft mode is for validation, not for generating a second AI summary of the same article.
+
 ## Instagram
 
 Instagram publishing also uses named targets. Real Instagram support is not implemented yet, so use `PUBLISH_MODE=mock` for now.

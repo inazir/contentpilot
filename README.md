@@ -107,10 +107,13 @@ Current capabilities:
 * Real Facebook publishing
 * Duplicate prevention
 * Runtime-safe execution
+* **RSS/Atom feed ingestion with deduplication and AI summarization**
+* **Draft mode** — full pipeline without publishing (safe for testing)
+* **Publish mode** — complete pipeline with social posting
 
-Current mode is still synthetic/topic-based generation.
-
-Real RSS/news ingestion is planned in a future phase.
+The module now supports two content paths:
+1. **RSS pipeline** — fetches real articles from configured RSS/Atom feeds, deduplicates, summarizes via AI, and publishes
+2. **Fallback topic** — generates content from a static topic when no feeds are configured
 
 ---
 
@@ -460,22 +463,11 @@ Pytest and CI pipelines may be introduced later.
 | Phase 4 — Reliability + persistence     | Complete |
 | Phase 5 — Real Facebook publishing      | Complete |
 | Phase 6 — Runtime + scheduler hardening | Complete |
+| Phase 7 — RSS News Ingestion Pipeline   | Complete |
 
 ---
 
 # Planned Future Phases
-
-## Phase 7 — News Ingestion Pipeline
-
-Planned:
-
-* RSS feeds
-* article normalization
-* deduplication
-* AI summarization
-* real news sourcing
-
----
 
 ## Phase 8 — Media Pipeline
 
