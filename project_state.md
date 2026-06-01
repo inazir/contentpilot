@@ -232,6 +232,47 @@ contentpilot/
 
 # Project Timeline
 
+## 2026-06-01 Phase 11A — Content Asset Bundle Storage (COMPLETE)
+Completed: 2026-06-01 
+
+### Goal
+Transform media engine outputs into reusable content asset packages
+stored on disk, ready for Phase 11B WordPress integration.
+
+### What was implemented
+- Added `shared/content/` package with four modules:
+  - `models.py` — AssetFile, AssetBundle, AssetStorageResult dataclasses
+  - `storage.py` — date-partitioned storage under data/media/YYYY/MM/DD/slug/
+  - `asset_builder.py` — orchestrates media engine + storage into one call
+  - `README.md` — architecture, storage layout, Phase 11B integration notes
+- AssetBundle is the handoff artifact Phase 11B will consume
+- AssetBuilder wired to real media engine:
+  - get_featured_image() for featured image
+  - format_for_social() for Facebook/Instagram/Story variants
+- Injectable image_generator parameter for offline testing
+- ENABLE_MEDIA_ASSETS flag gates entire pipeline
+
+### Storage layout
+data/media/YYYY/MM/DD/article-slug/
+  featured.jpg, facebook_landscape.jpg, facebook_square.jpg,
+  instagram_square.jpg, instagram_portrait.jpg, story.jpg,
+  metadata.json, article.md
+
+### Testing
+- 11/11 tests passing, fully offline, all mocked
+- Agent review completed — one bug found and fixed
+  (_generate_real_images() had wrong function names and signatures)
+
+### New environment variables
+- ENABLE_MEDIA_ASSETS (default: true)
+- MEDIA_STORAGE_DIR (default: /app/data/media)
+
+### What is NOT included (Phase 11B)
+- WordPress media upload
+- Featured image attachment to posts
+- daily_news pipeline integration
+- Runtime metrics for media operations
+
 ## 2026-06-01 — Phase 10 / Media & Asset Generation Layer
 
 ### Completed
