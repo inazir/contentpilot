@@ -232,46 +232,104 @@ contentpilot/
 
 # Project Timeline
 
-## 2026-06-01 Phase 11A — Content Asset Bundle Storage (COMPLETE)
-Completed: 2026-06-01 
+## Phase 11 — Content Asset Pipeline (COMPLETE)
+Completed: 2026-06-01
 
 ### Goal
-Transform media engine outputs into reusable content asset packages
-stored on disk, ready for Phase 11B WordPress integration.
+Build a reusable content asset packaging system (11A) and wire it into
+the daily_news production workflow with WordPress featured image support (11B).
 
-### What was implemented
-- Added `shared/content/` package with four modules:
+### Phase 11A — Asset Bundle Storage
+
+#### What was implemented
+- Added `shared/content/` package:
   - `models.py` — AssetFile, AssetBundle, AssetStorageResult dataclasses
   - `storage.py` — date-partitioned storage under data/media/YYYY/MM/DD/slug/
   - `asset_builder.py` — orchestrates media engine + storage into one call
-  - `README.md` — architecture, storage layout, Phase 11B integration notes
-- AssetBundle is the handoff artifact Phase 11B will consume
+  - `README.md` — architecture, storage layout, integration notes
 - AssetBuilder wired to real media engine:
-  - get_featured_image() for featured image
-  - format_for_social() for Facebook/Instagram/Story variants
-- Injectable image_generator parameter for offline testing
-- ENABLE_MEDIA_ASSETS flag gates entire pipeline
+  - `get_featured_image()` for featured image
+  - `format_for_social()` for Facebook/Instagram/Story variants
+- Injectable `image_generator` parameter for offline testing
+- `ENABLE_MEDIA_ASSETS` flag gates entire pipeline
 
-### Storage layout
+#### Storage layout
+```
 data/media/YYYY/MM/DD/article-slug/
   featured.jpg, facebook_landscape.jpg, facebook_square.jpg,
   instagram_square.jpg, instagram_portrait.jpg, story.jpg,
   metadata.json, article.md
+```
 
-### Testing
+#### Testing
 - 11/11 tests passing, fully offline, all mocked
-- Agent review completed — one bug found and fixed
-  (_generate_real_images() had wrong function names and signatures)
+- Agent review completed — one bug fixed:
+  `_generate_real_images()` had wrong function names and signatures
 
-### New environment variables
-- ENABLE_MEDIA_ASSETS (default: true)
-- MEDIA_STORAGE_DIR (default: /app/data/media)
+---
 
-### What is NOT included (Phase 11B)
-- WordPress media upload
-- Featured image attachment to posts
-- daily_news pipeline integration
-- Runtime metrics for media operations
+### Phase 11B — Production Asset Integration
+
+#### What was implemented
+- Added `shared/content/wordpress_media.py`
+  - Uploads JPEG bytes to WordPress media library
+  - Returns `WordPressMediaResult` with `media_id`
+  - Retry logic with exponential backoff
+  - Never raises — all failures returned as result objects
+- Updated `shared/config.py`
+  - Added `MediaConfig` dataclass
+  - Added `get_media_config()` reading all Phase 11B feature flags
+  - Added `get_wordpress_config()`
+- Updated `shared/models.py`
+  - 5 new runtime metric fields on `ExecutionSummary`:
+    `assets_generated`, `bundles_created`, `images_generated`,
+    `images_uploaded`, `wordpress_media_failures`
+- Updated `modules/daily_news/runner.py`
+  - `_build_asset_bundle()` — generates and stores AssetBundle
+  - `_upload_featured_image()` — uploads featured image, returns media_id
+  - `_publish_to_wordpress()` — creates WP post with featured_media attached
+  - All three helpers are failure-isolated (catch all exceptions)
+  - Social publish always runs regardless of media step outcomes
+- Updated `shared/content/README.md`
+  - Full production workflow documentation
+  - Feature flags reference
+  - Troubleshooting guide
+
+#### Production workflow
+```
+RSS → AI Generation → AssetBuilder → AssetStorage
+  → WordPress Media Upload → WordPress Post (with featured image)
+  → Facebook / Instagram Publish
+```
+
+#### Failure isolation strategy
+- Asset generation fails → media_id stays None → WP post published without featured image
+- WP media upload fails → logged as warning → social publish still runs
+- WordPress not configured → silently skipped, not counted as failure
+
+#### Testing
+- 13/13 Phase 11B integration tests passing in Docker
+- 11/11 Phase 11A tests still passing (no regressions)
+- All tests offline — no network calls, all external services mocked
+- Bug fixed during testing: Docker path resolution for runner module
+  (uses `/app/module/` inside container, falls back to `/app/modules/daily_news/`)
+
+---
+
+### New environment variables (Phase 11A + 11B)
+
+| Variable | Default | Description |
+|---|---|---|
+| `ENABLE_MEDIA_ASSETS` | `true` | Master toggle for asset pipeline |
+| `ENABLE_FEATURED_IMAGES` | `true` | Upload featured image to WordPress |
+| `ENABLE_SOCIAL_IMAGES` | `true` | Generate social image variants |
+| `MEDIA_BRANDING_ENABLED` | `false` | Apply branding overlay |
+| `MEDIA_ADS_ENABLED` | `false` | Apply ads overlay |
+| `MEDIA_STORAGE_DIR` | `/app/data/media` | Root storage directory |
+
+### Backward compatibility
+When `ENABLE_MEDIA_ASSETS=false`, workflow is identical to pre-Phase-11 behavior.
+No behavior regressions when media flags are unset or disabled.
 
 ## 2026-06-01 — Phase 10 / Media & Asset Generation Layer
 

@@ -5,7 +5,6 @@ All environment variable reads go through here.
 Nothing else should call os.getenv() for platform/publish config.
 
 AI-specific config still lives in shared/ai/config.py (backward compat).
-That file will eventually merge here.
 """
 
 import os
@@ -48,29 +47,6 @@ def load_social_targets() -> dict[str, SocialTarget]:
     """
     Reads all targets from SOCIAL_TARGETS env var and builds
     a dict of {target_key: SocialTarget}.
-
-    SOCIAL_TARGETS format: "gs_facebook_main,gs_facebook_brand2,gs_instagram_main"
-
-    Each target must have these env vars:
-    - SOCIAL__{TARGET_KEY}__PLATFORM
-    - SOCIAL__{TARGET_KEY}__ENABLED
-    - SOCIAL__{TARGET_KEY}__PAGE_ID
-    - SOCIAL__{TARGET_KEY}__ACCESS_TOKEN
-    - SOCIAL__{TARGET_KEY}__NAME (optional)
-
-    Example:
-        SOCIAL_TARGETS=gs_facebook_main,gs_facebook_brand2
-        SOCIAL__GS_FACEBOOK_MAIN__PLATFORM=facebook
-        SOCIAL__GS_FACEBOOK_MAIN__ENABLED=true
-        SOCIAL__GS_FACEBOOK_MAIN__PAGE_ID=111111111
-        SOCIAL__GS_FACEBOOK_MAIN__ACCESS_TOKEN=EAAxxxxx
-        SOCIAL__GS_FACEBOOK_BRAND2__PLATFORM=facebook
-        SOCIAL__GS_FACEBOOK_BRAND2__ENABLED=true
-        SOCIAL__GS_FACEBOOK_BRAND2__PAGE_ID=222222222
-        SOCIAL__GS_FACEBOOK_BRAND2__ACCESS_TOKEN=EAAyyyyy
-
-    Returns:
-        dict[str, SocialTarget]: Empty dict if SOCIAL_TARGETS is not set.
     """
     raw = os.getenv("SOCIAL_TARGETS", "").strip()
     if not raw:
@@ -85,7 +61,7 @@ def load_social_targets() -> dict[str, SocialTarget]:
 
         platform = os.getenv(f"{prefix}__PLATFORM", "").strip().lower()
         if not platform:
-            continue   # skip incomplete target definitions
+            continue
 
         targets[normalized_key] = SocialTarget(
             key=key,
@@ -114,16 +90,12 @@ def get_db_path() -> str:
 def get_log_level() -> str:
     return os.getenv("LOG_LEVEL", "INFO").strip().upper()
 
-# shared/config_wordpress_addition.py
-#
-# INSTRUCTIONS: Add the contents of this file to the BOTTOM of shared/config.py
-# Do NOT replace shared/config.py — append this block only.
-#
+
 # ---------------------------------------------------------------------------
 # WordPress
 # ---------------------------------------------------------------------------
 
-def get_wordpress_config() -> "WordPressConfig":
+def get_wordpress_config():
     """
     Build WordPressConfig from environment variables.
     Raises ValueError if required credentials are missing.
@@ -150,3 +122,45 @@ def get_wordpress_config() -> "WordPressConfig":
         max_retries     = int(os.getenv("WORDPRESS_MAX_RETRIES", "3")),
     )
 
+
+# ---------------------------------------------------------------------------
+# Media / Content Asset Feature Flags (Phase 11B)
+# ---------------------------------------------------------------------------
+
+def get_media_config() -> "MediaConfig":
+    """Build MediaConfig from environment variables."""
+    return MediaConfig(
+        enabled           = _env_bool("ENABLE_MEDIA_ASSETS",    True),
+        featured_images   = _env_bool("ENABLE_FEATURED_IMAGES", True),
+        social_images     = _env_bool("ENABLE_SOCIAL_IMAGES",   True),
+        branding_enabled  = _env_bool("MEDIA_BRANDING_ENABLED", False),
+        ads_enabled       = _env_bool("MEDIA_ADS_ENABLED",      False),
+        storage_dir       = os.getenv("MEDIA_STORAGE_DIR", "/app/data/media").strip(),
+    )
+
+
+@dataclass(frozen=True)
+class MediaConfig:
+    """
+    Feature flags for the Phase 11 content asset pipeline.
+
+    All flags default to safe values:
+      - enabled=True   → asset generation active
+      - featured_images=True → upload featured image to WordPress
+      - social_images=True   → generate social variants
+      - branding_enabled=False → no branding overlay by default
+      - ads_enabled=False      → no ads by default
+    """
+    enabled:          bool
+    featured_images:  bool
+    social_images:    bool
+    branding_enabled: bool
+    ads_enabled:      bool
+    storage_dir:      str
+
+
+def _env_bool(key: str, default: bool) -> bool:
+    raw = os.getenv(key, "").strip().lower()
+    if not raw:
+        return default
+    return raw in {"1", "true", "yes"}
