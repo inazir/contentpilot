@@ -6,4 +6,4 @@ RUN apt-get update && apt-get install -y \
     curl git ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python -m pip install --no-cache-dir requests
+RUN python -m pip install --no-cache-dir requests Pillow>=10.0.0 Pillow>=10.0.0

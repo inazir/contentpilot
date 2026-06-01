@@ -4,13 +4,13 @@
 
 ### Current Maturity
 
-Production-capable publishing platform foundation completed.
+Production-capable publishing platform with media generation layer.
 
 The platform has successfully transitioned from a proof-of-concept automation system into a stable, observable, containerized content automation platform with both social publishing and WordPress publishing infrastructure.
 
-Core runtime, ingestion, AI generation, deduplication, social publishing, WordPress publishing, monitoring, and operational safety layers are now in place.
+Core runtime, ingestion, AI generation, deduplication, social publishing, WordPress publishing, monitoring, operational safety, and media asset generation layers are now in place.
 
-The project is currently entering its first controlled multi-channel publishing pilot stage.
+The project is currently entering its first controlled multi-channel publishing pilot stage with full media generation capabilities.
 
 ---
 
@@ -40,6 +40,18 @@ The project is currently entering its first controlled multi-channel publishing 
 * Deduplication before AI processing
 * AI summarization pipeline
 * Static topic generation fallback
+
+### Media & Asset Generation
+
+* Provider-agnostic image generation (mock / OpenAI DALL-E 3 / Stability AI / Ideogram / Flux)
+* Stock image sourcing (mock / Pexels / Unsplash / Pixabay)
+* Deterministic image processing utilities (resize, crop, compress, convert, thumbnail)
+* Social media image formatting (Facebook, Instagram, Stories — all 5 formats)
+* Composition pipeline engine (branding overlay + ad strip — both optional)
+* Featured image pipeline (stock → fallback AI → compose → result)
+* Bytes-in / bytes-out architecture throughout
+* Full attribution metadata tracking
+* Mock providers require zero API keys
 
 ### Publishing
 
@@ -84,8 +96,8 @@ The project is currently entering its first controlled multi-channel publishing 
 
 * Branch: `main`
 * State: Stable
-* Current Milestone: Phase 9 Complete
-* Ready For: Phase 10 (Media & Asset Generation Layer)
+* Current Milestone: Phase 10 Complete
+* Ready For: Phase 11 (Multi-Module Expansion)
 
 ---
 
@@ -104,6 +116,8 @@ Validated:
 * RSS ingestion tests ✅
 * Notification tests ✅
 * WordPress publishing tests ✅
+* Media foundation tests ✅
+* Media composition tests ✅
 
 All known automated validation pipelines are currently passing.
 
@@ -136,6 +150,15 @@ contentpilot/
 │   ├── social/
 │   ├── wordpress/
 │   ├── ingestion/
+│   ├── media/                    ← NEW (Phase 10)
+│   │   ├── __init__.py
+│   │   ├── models.py
+│   │   ├── image_generation.py
+│   │   ├── image_sourcing.py
+│   │   ├── image_processing.py
+│   │   ├── image_composition.py
+│   │   ├── featured_image.py
+│   │   └── social_formatter.py
 │   ├── runtime.py
 │   ├── store.py
 │   ├── notify.py
@@ -191,22 +214,152 @@ contentpilot/
 
 ## Implemented Phases
 
-| Phase     | Name                                         | Status     |
-| --------- | -------------------------------------------- | ---------- |
-| Phase 1   | Docker Foundation & Skeleton Setup           | ✅ Complete |
-| Phase 2   | Daily News Core Module                       | ✅ Complete |
-| Phase 3   | Social Publishing Layer                      | ✅ Complete |
-| Phase 4   | Persistence & Deduplication Foundation       | ✅ Complete |
-| Phase 5   | Named Social Target Routing                  | ✅ Complete |
-| Phase 6   | Runtime, Scheduler & Alerts                  | ✅ Complete |
-| Phase 6.5 | Observability & Operational Stabilization    | ✅ Complete |
-| Phase 7   | RSS Ingestion Pipeline                       | ✅ Complete |
-| Phase 8   | Live Pilot Hardening & Credential Activation | ✅ Complete |
-| Phase 9   | WordPress Publishing Layer                   | ✅ Complete |
+| Phase     | Name                                         | Status      |
+| --------- | -------------------------------------------- | ----------- |
+| Phase 1   | Docker Foundation & Skeleton Setup           | ✅ Complete  |
+| Phase 2   | Daily News Core Module                       | ✅ Complete  |
+| Phase 3   | Social Publishing Layer                      | ✅ Complete  |
+| Phase 4   | Persistence & Deduplication Foundation       | ✅ Complete  |
+| Phase 5   | Named Social Target Routing                  | ✅ Complete  |
+| Phase 6   | Runtime, Scheduler & Alerts                  | ✅ Complete  |
+| Phase 6.5 | Observability & Operational Stabilization    | ✅ Complete  |
+| Phase 7   | RSS Ingestion Pipeline                       | ✅ Complete  |
+| Phase 8   | Live Pilot Hardening & Credential Activation | ✅ Complete  |
+| Phase 9   | WordPress Publishing Layer                   | ✅ Complete  |
+| Phase 10  | Media & Asset Generation Layer               | ✅ Complete  |
 
 ---
 
 # Project Timeline
+
+## 2026-06-01 — Phase 10 / Media & Asset Generation Layer
+
+### Completed
+
+* Introduced reusable media generation layer for all modules.
+* Added provider-agnostic image generation with retry and permanent-error fast-path.
+* Added stock image sourcing with attribution metadata.
+* Added deterministic image processing utilities.
+* Added social media image formatter (5 platform formats).
+* Added composition pipeline engine with optional branding and ad overlays.
+* Added featured image pipeline (stock → AI fallback → compose).
+* All image data travels as bytes — no file I/O in core pipeline.
+* 112 tests passing (50 foundation + 62 composition). Zero network calls required.
+
+### Technical Changes
+
+Created:
+
+```text
+shared/media/
+├── __init__.py
+├── models.py
+├── image_generation.py
+├── image_sourcing.py
+├── image_processing.py
+├── image_composition.py
+├── featured_image.py
+└── social_formatter.py
+```
+
+Added tests:
+
+```text
+scripts/test_media_foundation.py    ← 50 tests
+scripts/test_media_composition.py   ← 62 tests
+```
+
+Updated:
+
+```text
+infra/docker/base.Dockerfile        ← added Pillow>=10.0.0
+requirements/base.txt               ← added Pillow>=10.0.0
+```
+
+#### Models
+
+| Type | Frozen | Purpose |
+|---|---|---|
+| `ImageRequest` | No | Input for AI generation |
+| `StockImageRequest` | No | Input for stock image search |
+| `ImageMetadata` | Yes | Attribution + provenance |
+| `ImageProviderResponse` | Yes | Raw provider output |
+| `ImageResult` | Yes | Final processed image |
+| `SocialImageResult` | Yes | Per-format social output |
+| `BrandingConfig` | No | Composition branding config |
+| `AdConfig` | No | Composition ad strip config |
+| `ImageCompositionConfig` | No | Full composition config |
+| `ComposedImageResult` | Yes | Composition pipeline output |
+| `FeaturedImageResult` | No | Full pipeline result |
+
+#### Image Generation Providers
+
+| Provider | Status | Env Var |
+|---|---|---|
+| `mock` | ✅ Ready | None required |
+| `openai` | ✅ Ready | `OPENAI_API_KEY` |
+| `stability` | 🔧 Stub | `STABILITY_API_KEY` |
+| `ideogram` | 🔧 Stub | `IDEOGRAM_API_KEY` |
+| `flux` | 🔧 Stub | — |
+
+#### Stock Image Providers
+
+| Provider | Status | Env Var |
+|---|---|---|
+| `mock` | ✅ Ready | None required |
+| `pexels` | ✅ Ready | `PEXELS_API_KEY` |
+| `unsplash` | ✅ Ready | `UNSPLASH_ACCESS_KEY` |
+| `pixabay` | ✅ Ready | `PIXABAY_API_KEY` |
+
+#### Social Formats
+
+| Format | Dimensions |
+|---|---|
+| `FACEBOOK_LANDSCAPE` | 1200 × 630 |
+| `FACEBOOK_SQUARE` | 1080 × 1080 |
+| `INSTAGRAM_SQUARE` | 1080 × 1080 |
+| `INSTAGRAM_PORTRAIT` | 1080 × 1350 |
+| `STORY` | 1080 × 1920 |
+
+#### Configuration
+
+New optional env vars:
+
+```text
+IMAGE_GENERATION_PROVIDER=mock       # mock | openai | stability | ideogram | flux
+IMAGE_STOCK_PROVIDER=mock            # mock | pexels | unsplash | pixabay
+OPENAI_API_KEY=                      # for DALL-E 3 generation
+PEXELS_API_KEY=                      # for Pexels stock sourcing
+UNSPLASH_ACCESS_KEY=                 # for Unsplash stock sourcing
+PIXABAY_API_KEY=                     # for Pixabay stock sourcing
+MEDIA_OUTPUT_DIR=/app/data/media     # where composed files are saved
+```
+
+### Validation
+
+Verified:
+
+* Mock image generation (deterministic, no API key)
+* Mock stock sourcing (deterministic, no API key)
+* Image processing (resize, crop, compress, convert, thumbnail)
+* Social formatting (all 5 platform formats, correct dimensions)
+* Branding overlay (brand name, CTA box, logo top-left/bottom-right)
+* Ad strip (text and image types, height ratio bounds)
+* Combined composition (branding + ads, strict layer order)
+* Featured image pipeline end-to-end
+* save_to_disk behaviour
+* Frozen result types enforced
+* All 112 tests pass in Docker with zero network calls
+
+### Notes
+
+* No database schema changes required
+* No module architecture changes required
+* No existing shared/ layers modified
+* Media layer is fully reusable by all future modules
+* Composition pipeline is deterministic — same config always produces identical output
+
+---
 
 ## 2026-05-31 — Phase 9 / WordPress Publishing Layer
 
@@ -471,6 +624,18 @@ Provides:
 * Feed configuration
 * Article fingerprinting
 
+### shared/media
+
+Provides:
+
+* Provider-agnostic image generation
+* Stock image sourcing with attribution
+* Deterministic image processing (resize, crop, compress, convert)
+* Social media format resizing (5 platform formats)
+* Composition pipeline (branding + ad overlays)
+* Featured image pipeline (stock → AI fallback → compose)
+* Bytes-in / bytes-out architecture
+
 ### shared/runtime
 
 Provides:
@@ -579,6 +744,12 @@ AI generation and publishing remain intentionally decoupled.
 
 This allows future modules to reuse the same WordPress layer without modification.
 
+### Media Layer As Pure Bytes Pipeline
+
+All image data travels as raw bytes through the pipeline.
+File I/O only happens at the explicit call site via `save_to_disk=True`.
+This keeps the core pipeline testable without any filesystem dependency.
+
 ---
 
 ## Known Limitations
@@ -589,8 +760,8 @@ This allows future modules to reuse the same WordPress layer without modificatio
 
 ### Media
 
-* No image generation pipeline
 * No video generation pipeline
+* Stability AI, Ideogram, Flux providers are stubs (not yet activated)
 
 ### Multi-Module Expansion
 
@@ -606,40 +777,33 @@ Only `daily_news` is currently production-ready.
 
 ## Next Major Milestone
 
-# Phase 10 — Media & Asset Generation Layer
+# Phase 11 — Multi-Module Expansion
 
 ### Goal
 
-Introduce reusable media generation capabilities for all modules.
+Expand the platform beyond `daily_news` into additional publishing modules
+that consume the shared media, WordPress, and social layers.
 
-### Planned Components
+### Planned Modules
 
 ```text
-shared/media/
-├── image_generation.py
-├── image_sourcing.py
-├── image_processing.py
-├── video_generation.py
-└── models.py
+modules/
+├── article_publisher/   ← Long-form article generation + WordPress publish
+├── deals_engine/        ← Affiliate deals automation
+├── social_tips/         ← Tips image + social publish pipeline
+└── social_video/        ← Short-form video generation + publish
 ```
 
 ### Objectives
 
-* AI image generation
-* Featured image generation
-* Stock image sourcing
-* Image optimization
-* Social image formatting
-* Future video generation support
-* Shared reusable media interface
+* Reuse shared/media for featured image generation in article_publisher
+* Reuse shared/wordpress for structured publishing
+* Reuse shared/social for multi-platform distribution
+* Maintain strict module isolation
 
 ---
 
 ## Long-Term Roadmap
-
-### Phase 10
-
-Media & Asset Generation Layer
 
 ### Phase 11
 

@@ -39,3 +39,4 @@ skills-lock.json
 .gitignore
 .clineignore
 .clinerules.md
+data/media/composed/*.jpg
