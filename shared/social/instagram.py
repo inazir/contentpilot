@@ -20,6 +20,7 @@ def publish_post(
     target: SocialTarget,
     image_url: str | None = None,
     mode: str = "mock",
+    image_bytes: bytes | None = None,
 ) -> PublishResult:
     if not content.strip():
         raise ValidationError("content is empty", platform="instagram")

@@ -138,6 +138,44 @@ def _build_asset_bundle(
         return None
 
 
+def _select_social_image(asset_result) -> tuple[bytes | None, str]:
+    """
+    Pick the best image from an asset bundle for social publishing.
+
+    Preference order: facebook_landscape → featured → facebook_square
+
+    Returns (image_bytes, filename) or (None, "").
+    Never raises.
+    """
+    if asset_result is None or not asset_result.success:
+        return None, ""
+
+    bundle = asset_result.bundle
+    if bundle is None:
+        return None, ""
+
+    for key, filename in [
+        ("facebook_landscape", "facebook_landscape.jpg"),
+        ("featured",           "featured.jpg"),
+        ("facebook_square",    "facebook_square.jpg"),
+    ]:
+        asset = bundle.assets.get(key)
+        if asset and asset.exists():
+            try:
+                image_bytes = asset.path.read_bytes()
+                logger.info(
+                    "social_image_selected | key=%s | filename=%s | size=%d",
+                    key, filename, len(image_bytes),
+                )
+                return image_bytes, filename
+            except Exception as exc:
+                logger.warning(
+                    "social_image_read_failed | key=%s | error=%s", key, exc
+                )
+
+    return None, ""
+
+
 def _upload_featured_image(
     asset_result,
     title: str,
@@ -381,11 +419,16 @@ def main() -> ExecutionSummary:
 
             _publish_to_wordpress(article.title, post_text, featured_media_id, summary)
 
+            # --- Select social image from bundle ---
+            image_bytes, image_name = _select_social_image(asset_result)
+
             pub_summary = publish_post(
                 content={
-                    "title":     article.title,
-                    "text":      post_text,
-                    "image_url": None,
+                    "title":       article.title,
+                    "text":        post_text,
+                    "image_url":   None,
+                    "image_bytes": image_bytes,
+                    "image_name":  image_name,
                 },
                 targets     = _get_publish_platforms(),
                 module_name = "daily_news",
@@ -476,9 +519,18 @@ def _run_single_topic(
     )
     _publish_to_wordpress(topic, post_text, featured_media_id, summary)
 
+    # --- Select social image from bundle ---
+    image_bytes, image_name = _select_social_image(asset_result)
+
     # --- Social ---
     pub_summary = publish_post(
-        content     = {"title": topic, "text": post_text, "image_url": None},
+        content={
+            "title":       topic,
+            "text":        post_text,
+            "image_url":   None,
+            "image_bytes": image_bytes,
+            "image_name":  image_name,
+        },
         targets     = platforms,
         module_name = "daily_news",
     )

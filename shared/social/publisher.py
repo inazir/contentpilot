@@ -2,23 +2,21 @@
 """
 Orchestrates publishing across social targets.
 
-Responsibilities:
-- read publish mode from environment
-- load all social targets from config
-- check duplicates via shared/store
-- call platform adapters with target info
-- catch and classify exceptions
-- record publish attempts in SQLite
-- return aggregated results without crashing the caller
+Phase 12A: supports image_bytes in content dict for image publishing.
+
+content dict schema:
+    {
+        "title":       str,
+        "text":        str,
+        "image_url":   str | None,   # legacy, passed through
+        "image_bytes": bytes | None, # Phase 12A: raw image for direct upload
+        "image_name":  str | None,   # optional filename for logging
+    }
 """
 
 import logging
-import os
 
-from shared.config import (
-    get_publish_mode,
-    load_social_targets,
-)
+from shared.config import get_publish_mode, load_social_targets
 from shared.store import already_published, compute_content_hash, record_publish
 
 from .exceptions import PublishError
@@ -27,19 +25,10 @@ from . import facebook, instagram
 
 logger = logging.getLogger(__name__)
 
-# Registry maps platform name → adapter module
-# Each adapter must expose: publish_post(content, target, image_url, mode) -> PublishResult
 _ADAPTERS = {
     "facebook":  facebook,
     "instagram": instagram,
 }
-
-
-def _get_max_posts_per_run() -> int:
-    try:
-        return int(os.getenv("MAX_POSTS_PER_RUN", "10"))
-    except ValueError:
-        return 10
 
 
 def publish_post(
@@ -51,8 +40,14 @@ def publish_post(
     Publish content to all requested targets.
 
     Args:
-        content:     {"title": str, "text": str, "image_url": Optional[str]}
-        targets:     list of target keys, e.g. ["gs_facebook_main", "gs_instagram_main"]
+        content:     {
+                       "title": str,
+                       "text": str,
+                       "image_url": str | None,
+                       "image_bytes": bytes | None,  # Phase 12A
+                       "image_name": str | None,     # Phase 12A, for logging
+                     }
+        targets:     list of target keys
         module_name: used for store tracking and logging
 
     Returns:
@@ -67,54 +62,50 @@ def publish_post(
 
     text         = content.get("text", "")
     image_url    = content.get("image_url")
+    image_bytes  = content.get("image_bytes")
+    image_name   = content.get("image_name", "image.jpg")
     content_hash = compute_content_hash(text)
 
-    # Load all available targets from config
-    all_targets = load_social_targets()
+    if image_bytes:
+        logger.info(
+            "social_image_selected | filename=%s | size=%d",
+            image_name, len(image_bytes),
+        )
 
-    published_this_run = 0
-    max_posts = _get_max_posts_per_run()
+    all_targets = load_social_targets()
 
     for target_key in targets:
         target_key = target_key.strip().lower()
         result = _publish_one(
-            target_key=target_key,
-            text=text,
-            image_url=image_url,
-            content_hash=content_hash,
-            module_name=module_name,
-            mode=mode,
-            all_targets=all_targets,
-            published_this_run=published_this_run,
-            max_posts=max_posts,
+            target_key   = target_key,
+            text         = text,
+            image_url    = image_url,
+            image_bytes  = image_bytes,
+            image_name   = image_name,
+            content_hash = content_hash,
+            module_name  = module_name,
+            mode         = mode,
+            all_targets  = all_targets,
         )
         summary.results.append(result)
-        if result.success and not result.metadata.get("duplicate"):
-            published_this_run += 1
 
     return summary
 
 
 def _publish_one(
-    target_key: str,
-    text: str,
-    image_url: str | None,
+    target_key:   str,
+    text:         str,
+    image_url:    str | None,
+    image_bytes:  bytes | None,
+    image_name:   str,
     content_hash: str,
-    module_name: str,
-    mode: str,
-    all_targets: dict,
-    published_this_run: int,
-    max_posts: int,
+    module_name:  str,
+    mode:         str,
+    all_targets:  dict,
 ) -> PublishResult:
-    """Publish to a single target. Always returns a PublishResult."""
-
-    # Resolve target from registry
     target = all_targets.get(target_key)
     if target is None:
-        logger.error(
-            "publish_decision | target=%s | platform=unknown | hash=%s | decision=error | reason=unknown_target",
-            target_key, content_hash[:12],
-        )
+        logger.error("Unknown target=%r", target_key)
         return PublishResult(
             platform="unknown",
             success=False,
@@ -122,13 +113,9 @@ def _publish_one(
             metadata={"target": target_key},
         )
 
-    # Get adapter for platform
     adapter = _ADAPTERS.get(target.platform)
     if adapter is None:
-        logger.error(
-            "publish_decision | target=%s | platform=%s | hash=%s | decision=error | reason=unknown_platform",
-            target_key, target.platform, content_hash[:12],
-        )
+        logger.error("Unknown platform=%r for target=%r", target.platform, target_key)
         return PublishResult(
             platform=target.platform,
             success=False,
@@ -136,12 +123,8 @@ def _publish_one(
             metadata={"target": target_key},
         )
 
-    # Gate 1: per-target enabled guard (enforced in real mode)
     if mode == "real" and not target.enabled:
-        logger.info(
-            "publish_decision | target=%s | platform=%s | hash=%s | decision=skip | reason=target_disabled",
-            target_key, target.platform, content_hash[:12],
-        )
+        logger.info("Target %s is disabled — skipping", target_key)
         return PublishResult(
             platform=target.platform,
             success=False,
@@ -149,11 +132,10 @@ def _publish_one(
             metadata={"target": target_key, "skipped": True},
         )
 
-    # Gate 2: idempotency — duplicate check at publisher level
     if already_published(content_hash, target_key):
         logger.info(
-            "publish_decision | target=%s | platform=%s | hash=%s | decision=skip | reason=duplicate",
-            target_key, target.platform, content_hash[:12],
+            "Duplicate skipped | target=%s | module=%s | hash=%s",
+            target_key, module_name, content_hash[:12],
         )
         return PublishResult(
             platform=target.platform,
@@ -162,86 +144,66 @@ def _publish_one(
             metadata={"target": target_key, "duplicate": True},
         )
 
-    # Gate 3: hard rate limit per run
-    if published_this_run >= max_posts:
-        logger.warning(
-            "publish_decision | target=%s | platform=%s | hash=%s | decision=skip | reason=rate_limit | run_count=%d | max=%d",
-            target_key, target.platform, content_hash[:12], published_this_run, max_posts,
-        )
-        return PublishResult(
-            platform=target.platform,
-            success=False,
-            error_message=f"Rate limit reached: {published_this_run}/{max_posts} posts this run",
-            metadata={"target": target_key, "rate_limited": True},
-        )
-
-    # All gates passed — call adapter
     try:
+        # Pass image_bytes to adapter — each adapter decides how to use it
         result = adapter.publish_post(
-            content=text,
-            target=target,
-            image_url=image_url,
-            mode=mode,
+            content     = text,
+            target      = target,
+            image_url   = image_url,
+            mode        = mode,
+            image_bytes = image_bytes,
         )
 
         record_publish(
-            content_hash=content_hash,
-            target_key=target_key,
-            platform=target.platform,
-            module_name=module_name,
-            status="success" if result.success else "failed",
-            external_post_id=result.external_post_id,
+            content_hash     = content_hash,
+            target_key       = target_key,
+            platform         = target.platform,
+            module_name      = module_name,
+            status           = "success" if result.success else "failed",
+            external_post_id = result.external_post_id,
         )
 
-        logger.info(
-            "publish_decision | target=%s | platform=%s | hash=%s | decision=publish | post_id=%s",
-            target_key, target.platform, content_hash[:12], result.external_post_id,
-        )
         return result
 
     except PublishError as exc:
         logger.error(
-            "publish_decision | target=%s | platform=%s | hash=%s | decision=error | reason=publish_error | retryable=%s | error=%s",
-            target_key, target.platform, content_hash[:12], exc.retryable, exc,
+            "Publish failed | target=%s | retryable=%s | error=%s",
+            target_key, exc.retryable, exc,
         )
         record_publish(
-            content_hash=content_hash,
-            target_key=target_key,
-            platform=target.platform,
-            module_name=module_name,
-            status="failed",
-            error_message=str(exc),
+            content_hash = content_hash,
+            target_key   = target_key,
+            platform     = target.platform,
+            module_name  = module_name,
+            status       = "failed",
+            error_message= str(exc),
         )
         return PublishResult(
-            platform=target.platform,
-            success=False,
-            error_message=str(exc),
-            retryable=exc.retryable,
-            metadata={"target": target_key},
+            platform      = target.platform,
+            success       = False,
+            error_message = str(exc),
+            retryable     = exc.retryable,
+            metadata      = {"target": target_key},
         )
 
     except NotImplementedError as exc:
-        logger.error(
-            "publish_decision | target=%s | platform=%s | hash=%s | decision=error | reason=not_implemented",
-            target_key, target.platform, content_hash[:12],
-        )
+        logger.error("Platform %s not implemented: %s", target.platform, exc)
         return PublishResult(
-            platform=target.platform,
-            success=False,
-            error_message=str(exc),
-            retryable=False,
-            metadata={"target": target_key},
+            platform      = target.platform,
+            success       = False,
+            error_message = str(exc),
+            retryable     = False,
+            metadata      = {"target": target_key},
         )
 
     except Exception as exc:
         logger.exception(
-            "publish_decision | target=%s | platform=%s | hash=%s | decision=error | reason=unexpected | error=%s",
-            target_key, target.platform, content_hash[:12], exc,
+            "Unexpected error publishing to target %s: %s", target_key, exc
         )
         return PublishResult(
-            platform=target.platform,
-            success=False,
-            error_message=f"Unexpected: {exc}",
-            retryable=True,
-            metadata={"target": target_key},
+            platform      = target.platform,
+            success       = False,
+            error_message = f"Unexpected: {exc}",
+            retryable     = True,
+            metadata      = {"target": target_key},
         )
