@@ -1,0 +1,10 @@
+services:
+  daily_news:
+    build:
+      context: ../..
+      dockerfile: modules/daily_news/Dockerfile
+    env_file: ../../.env
+    volumes:
+      - ../../shared:/app/shared:ro
+      - ../../data:/app/data
+    restart: "no"

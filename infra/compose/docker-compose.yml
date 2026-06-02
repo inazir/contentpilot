@@ -8,3 +8,7 @@ services:
     volumes:
       - ../../data:/app/data
     restart: "no"
+    
+    # Run container as host user to prevent root-owned files in mounted volumes
+    user: "${DOCKER_UID}:${DOCKER_GID}"
+

@@ -23,6 +23,7 @@ data/db/*
 data/cache/*
 data/logs/*
 data/backups/*
+data/media/*
 
 # But keep the directories themselves tracked by Git via their .gitkeep files
 !data/db/.gitkeep

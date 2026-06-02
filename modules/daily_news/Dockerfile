@@ -1,18 +1,13 @@
 FROM contentpilot-base:latest
 
-# Install module-specific dependencies (currently none beyond base)
-COPY requirements/news.txt /tmp/news.txt
+COPY --chown=appuser:appuser requirements/news.txt /tmp/news.txt
 RUN pip install --no-cache-dir -r /tmp/news.txt
 
-# Copy shared layer (already in base, but explicit copy handles dev overrides)
-COPY shared/ /app/shared/
+COPY --chown=appuser:appuser shared/ /app/shared/
+COPY --chown=appuser:appuser modules/daily_news/ /app/module/
+COPY --chown=appuser:appuser scripts/ /app/scripts/
 
-# Copy module code
-COPY modules/daily_news/ /app/module/
-
-# Copy root helper scripts for local container validation
-COPY scripts/ /app/scripts/
-
+USER appuser
 WORKDIR /app/module
 
 CMD ["python", "main.py"]
