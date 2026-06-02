@@ -114,7 +114,8 @@ class AssetBuilder:
             slug, keywords, branding_enabled,
         )
 
-        image_data = self._generate_images(title, summary, keywords)
+        image_data = self._generate_images(title, summary, keywords, branding_enabled=branding_enabled,
+    ads_enabled=ads_enabled)
 
         result = self._storage.save(
             bundle=bundle,
@@ -140,6 +141,8 @@ class AssetBuilder:
         title: str,
         summary: str,
         keywords: list[str],
+        branding_enabled: bool = False,
+        ads_enabled: bool = False,
     ) -> dict[str, bytes]:
         """
         Generate all image variants. Returns {key: jpeg_bytes}.
@@ -149,13 +152,21 @@ class AssetBuilder:
             # Injected generator (used in tests)
             return self._image_generator(title, summary, keywords)
 
-        return self._generate_real_images(title, summary, keywords)
+        return self._generate_real_images(
+            title,
+            summary,
+            keywords,
+            branding_enabled=branding_enabled,
+            ads_enabled=ads_enabled,
+        )
 
     def _generate_real_images(
         self,
         title: str,
         summary: str,
         keywords: list[str],
+        branding_enabled: bool = False,
+        ads_enabled: bool = False,
     ) -> dict[str, bytes]:
         """Generate images using the real media engine."""
         results: dict[str, bytes] = {}
@@ -163,19 +174,33 @@ class AssetBuilder:
         try:
             from shared.media.featured_image import get_featured_image
             from shared.media.social_formatter import format_for_social
-            from shared.media.models import SocialFormat
+            from shared.media.models import (
+                SocialFormat,
+                ImageCompositionConfig,
+                BrandingConfig,
+                AdConfig,
+            )
         except ImportError as exc:
             logger.warning(
                 "asset_builder_media_import_failed | error=%s | skipping_images", exc
             )
             return results
-
+        
+        config = ImageCompositionConfig(
+            branding=BrandingConfig(
+                enable=branding_enabled
+            ),
+            ads=AdConfig(
+                enable=ads_enabled
+            ),
+        )
         # Featured image
         try:
             featured_result = get_featured_image(
                 title=title,
                 summary=summary,
                 keywords=keywords,
+                config=config, 
                 save_to_disk=False,
             )
             if featured_result.success and featured_result.composed:
