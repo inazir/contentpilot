@@ -21,7 +21,7 @@ class ExecutionSummary:
     module: str
     duration_sec: float = 0.0
     posts_generated: int = 0
-    published: int = 0
+    social_posts_published: int = 0
     duplicates_skipped: int = 0
     failures: int = 0
     dry_run: bool = False
@@ -33,6 +33,10 @@ class ExecutionSummary:
     images_uploaded: int = 0
     wordpress_media_failures: int = 0
 
+    # WordPress publish metrics (separate from social publishing)
+    wordpress_posts_created: int = 0
+    wordpress_posts_published: int = 0
+
     extra: dict = field(default_factory=dict)
     completed_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -42,16 +46,18 @@ class ExecutionSummary:
         return {
             "module":                   self.module,
             "duration_sec":             round(self.duration_sec, 2),
-            "posts_generated":          self.posts_generated,
-            "published":                self.published,
-            "duplicates_skipped":       self.duplicates_skipped,
+            "posts_generated":             self.posts_generated,
+            "social_posts_published":      self.social_posts_published,
+            "duplicates_skipped":          self.duplicates_skipped,
             "failures":                 self.failures,
             "dry_run":                  self.dry_run,
-            "assets_generated":         self.assets_generated,
-            "bundles_created":          self.bundles_created,
-            "images_generated":         self.images_generated,
-            "images_uploaded":          self.images_uploaded,
-            "wordpress_media_failures": self.wordpress_media_failures,
+            "assets_generated":           self.assets_generated,
+            "bundles_created":            self.bundles_created,
+            "images_generated":           self.images_generated,
+            "images_uploaded":            self.images_uploaded,
+            "wordpress_media_failures":   self.wordpress_media_failures,
+            "wordpress_posts_created":    self.wordpress_posts_created,
+            "wordpress_posts_published":  self.wordpress_posts_published,
             "completed_at":             self.completed_at,
             **self.extra,
         }

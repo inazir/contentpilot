@@ -259,6 +259,6 @@ def managed_run(module_name: str):
         _release_lock(module_name)
 
         logger.info(
-            "job_end | module=%s | run_id=%s | success=%s | duration=%.2fs | published=%d",
+            "job_end | module=%s | run_id=%s | success=%s | duration=%.2fs | social_posts_published=%d",
             module_name, run_id, success, duration, ctx.publish_count,
         )

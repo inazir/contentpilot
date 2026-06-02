@@ -41,7 +41,7 @@ if __name__ == "__main__":
     try:
         with managed_run("daily_news") as ctx:
             summary = run(args)
-            ctx.publish_count = summary.published
+            ctx.publish_count = summary.social_posts_published
             summary.log_summary(logger)
     except SystemExit as exc:
         code = int(exc.code) if exc.code is not None else 1

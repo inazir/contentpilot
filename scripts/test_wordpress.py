@@ -270,6 +270,71 @@ def main():
     else:
         print("\n  All tests passed.")
 
+# ---------------------------------------------------------------------------
+# Integration-style pipeline checks (NEW)
+# ---------------------------------------------------------------------------
 
+import subprocess
+import re
+
+
+def run_daily_news(topic: str) -> str:
+    cmd = [
+        "docker", "compose",
+        "-f", "infra/compose/docker-compose.yml",
+        "run", "--rm",
+        "daily_news",
+        "python", "main.py",
+        "--topic", topic
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.stdout + "\n" + result.stderr
+
+
+def test_daily_news_wordpress_integration():
+    """
+    End-to-end test:
+    - runs full pipeline in Docker
+    - verifies WordPress post creation
+    - verifies new logging format
+    - verifies metrics correctness
+    """
+
+    logs = run_daily_news("integration test wordpress logging")
+    lines = logs.splitlines()
+
+    # 1. WordPress unified log MUST exist
+    wp_logs = [l for l in lines if "wordpress_post_result" in l]
+    assert len(wp_logs) == 1, "Missing wordpress_post_result log"
+
+    match = re.search(
+        r"post_id=(\d+).*status=([a-zA-Z]+).*url=(\S+)",
+        wp_logs[0]
+    )
+    assert match, "Invalid wordpress_post_result format"
+
+    post_id = match.group(1)
+    status = match.group(2)
+
+    assert post_id.isdigit()
+    assert status in ["draft", "publish"]
+
+    # 2. Metrics MUST exist
+    assert any("wordpress_posts_created=" in l for l in lines), \
+        "Missing wordpress_posts_created metric"
+
+    assert any("wordpress_posts_published=" in l for l in lines), \
+        "Missing wordpress_posts_published metric"
+
+    # 3. Pipeline must succeed
+    assert "job_end" in logs
+    assert "success=True" in logs
+
+    # 4. Media must still work
+    assert "wp_media_upload_success" in logs
+
+    # 5. Asset pipeline must still work
+    assert "asset_builder_complete" in logs
 if __name__ == "__main__":
     main()

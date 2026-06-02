@@ -211,17 +211,18 @@ def _publish_to_wordpress(
     post_text: str,
     featured_media_id: int | None,
     summary_obj: ExecutionSummary,
-) -> bool:
+) -> str | None:
     """
     Publish article to WordPress.
 
-    Returns True if published, False otherwise.
+    Returns post status string ("draft" / "publish") on success, None on failure.
+    Also updates summary_obj.wordpress_posts_created / wordpress_posts_published.
     Always isolated — never raises upward.
     """
     wp_enabled = os.getenv("DAILY_NEWS_ENABLE_WORDPRESS", "false").strip().lower()
     if wp_enabled not in {"1", "true", "yes"}:
-        return False
-
+        return None
+    logger.info("wp_post_create_start | title=%r | featured_media_id=%s", title, featured_media_id)
     try:
         from shared.config import get_wordpress_config
         from shared.wordpress.client import WordPressClient
@@ -247,27 +248,30 @@ def _publish_to_wordpress(
         response = client.create_post(post_request)
 
         if response.success:
+            summary_obj.wordpress_posts_created += 1
+            if response.status == "publish":
+                summary_obj.wordpress_posts_published += 1
             logger.info(
-                "wp_post_published | post_id=%s | status=%s | url=%s",
+                "wordpress_post_result | post_id=%s | status=%s | url=%s",
                 response.wordpress_post_id, response.status, response.url,
             )
-            return True
+            return response.status
         else:
             logger.warning(
                 "wp_post_failed | title=%r | error=%s",
                 title, response.error_message,
             )
-            return False
+            return None
 
     except ValueError as exc:
         logger.debug(
             "wp_post_skip | reason=wordpress_not_configured | detail=%s", exc
         )
-        return False
+        return None
 
     except Exception as exc:
         logger.warning("wp_post_error | title=%r | error=%s", title, exc)
-        return False
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -390,18 +394,20 @@ def main() -> ExecutionSummary:
             for result in pub_summary.results:
                 logger.info(str(result))
                 if result.success and not result.metadata.get("duplicate"):
-                    summary.published += 1
+                    summary.social_posts_published += 1
                 elif not result.success:
                     summary.failures += 1
         else:
             logger.info("draft_mode_publish_skipped | title=%r", article.title)
 
     logger.info(
-        "daily_news_pipeline_complete | generated=%d | published=%d"
-        " | bundles=%d | images=%d | wp_media_failures=%d",
-        summary.posts_generated, summary.published,
+        "daily_news_pipeline_complete | generated=%d | social_posts_published=%d"
+        " | bundles=%d | images=%d | wp_media_failures=%d"
+        " | wordpress_posts_created=%d | wordpress_posts_published=%d",
+        summary.posts_generated, summary.social_posts_published,
         summary.bundles_created, summary.images_generated,
         summary.wordpress_media_failures,
+        summary.wordpress_posts_created, summary.wordpress_posts_published,
     )
 
     return summary
@@ -480,7 +486,7 @@ def _run_single_topic(
     for target_key, result in zip(platforms, pub_summary.results):
         logger.info(str(result))
         if result.success and not result.metadata.get("duplicate"):
-            summary.published += 1
+            summary.social_posts_published += 1
             record_publish(
                 content_hash     = topic_hash,
                 target_key       = target_key,
@@ -497,11 +503,13 @@ def _run_single_topic(
             )
 
     logger.info(
-        "daily_news_pipeline_complete | topic=%r | published=%d"
-        " | bundles=%d | images=%d | wp_media_failures=%d",
-        topic, summary.published,
+        "daily_news_pipeline_complete | topic=%r | social_posts_published=%d"
+        " | bundles=%d | images=%d | wp_media_failures=%d"
+        " | wordpress_posts_created=%d | wordpress_posts_published=%d",
+        topic, summary.social_posts_published,
         summary.bundles_created, summary.images_generated,
         summary.wordpress_media_failures,
+        summary.wordpress_posts_created, summary.wordpress_posts_published,
     )
 
     return summary
