@@ -4,13 +4,19 @@
 
 ### Current Maturity
 
-Production-capable publishing platform with media generation layer.
+Production-capable publishing platform with an automated media generation and visual branding layer.
 
-The platform has successfully transitioned from a proof-of-concept automation system into a stable, observable, containerized content automation platform with both social publishing and WordPress publishing infrastructure.
+The platform has successfully transitioned from a proof-of-concept automation system into a stable, observable, containerized content automation platform with:
 
-Core runtime, ingestion, AI generation, deduplication, social publishing, WordPress publishing, monitoring, operational safety, and media asset generation layers are now in place.
+* Multi-channel social publishing
+* WordPress integration
+* Robust image rendering template engines
+* Direct image upload pipelines
+* Responsive branding systems
 
-The project is currently entering its first controlled multi-channel publishing pilot stage with full media generation capabilities.
+Core runtime, ingestion, AI generation, deduplication, social publishing, WordPress publishing, media asset generation, and highly responsive branding overlay configurations are fully operational.
+
+The project is entering **Phase 13 (Scheduler Service / APScheduler Integration)** with complete multi-ratio visual branding capabilities verified.
 
 ---
 
@@ -18,159 +24,235 @@ The project is currently entering its first controlled multi-channel publishing 
 
 ## Infrastructure
 
-- Docker-first architecture
-- Containerized module execution
-- Docker Compose orchestration
-- Environment-driven configuration
-- GitHub Actions CI validation
+* Docker-first architecture
+* Containerized module execution
+* Docker Compose orchestration
+* Environment-driven configuration
+* GitHub Actions CI validation
 
 ## AI Layer
 
-- Provider abstraction architecture
-- Anthropic integration
-- DeepSeek integration
-- Automatic provider fallback support
-- Shared AI routing layer
+* Provider abstraction architecture
+* Anthropic integration
+* DeepSeek integration
+* Automatic provider fallback support
+* Shared AI routing layer
 
 ## Content Processing
 
-- RSS / Atom ingestion
-- Feed normalization
-- Article fingerprinting
-- Deduplication before AI processing
-- AI summarization pipeline
-- Static topic generation fallback
+* RSS / Atom ingestion
+* Feed normalization
+* Article fingerprinting
+* Deduplication before AI processing
+* AI summarization pipeline
+* Static topic generation fallback
 
-## Media & Asset Generation
+---
 
-### Image Generation
+# Media & Asset Generation
+
+## Image Generation
 
 Provider-agnostic image generation:
 
-- Mock
-- OpenAI DALL-E 3
-- Stability AI
-- Ideogram
-- Flux
+* Mock
+* OpenAI DALL-E 3
+* Stability AI
+* Ideogram
+* Flux
 
-### Stock Image Sourcing
+## Stock Image Sourcing
 
-- Mock
-- Pexels
-- Unsplash
-- Pixabay
+* Mock
+* Pexels
+* Unsplash
+* Pixabay
 
-### Image Processing
+## Image Processing
 
-- Resize
-- Crop
-- Compress
-- Convert
-- Thumbnail generation
+* Resize
+* Crop
+* Compress
+* Convert
+* Thumbnail generation
 
-### Social Formatting
+## Social Media Formatting
+
+Supported formats:
+
+| Format             | Resolution  |
+| ------------------ | ----------- |
+| Facebook Landscape | 1200 × 630  |
+| Facebook Square    | 1080 × 1080 |
+| Instagram Square   | 1080 × 1080 |
+| Instagram Portrait | 1080 × 1350 |
+| Story              | 1080 × 1920 |
+
+## Composition Pipeline
 
 Supports:
 
-- Facebook Landscape
-- Facebook Square
-- Instagram Square
-- Instagram Portrait
-- Story Format
+* Branding overlays (optional)
+* Advertisement overlays (optional)
 
-### Composition Pipeline
-
-Supports:
-
-- Branding overlays (optional)
-- Advertisement overlays (optional)
-
-### Featured Image Pipeline
+## Featured Image Pipeline
 
 Workflow:
 
+```text
 Stock Image
 → AI Fallback
 → Composition
 → Final Asset
-
-### Architectural Characteristics
-
-- Bytes-in / bytes-out architecture
-- Full attribution metadata tracking
-- Mock providers require zero API keys
+```
 
 ---
 
-## Publishing
+## Responsive Visual Branding System (Phase 12B)
 
-### Social Publishing
+### Layout A — Editorial Bands
 
-#### Facebook
+Features:
 
-- Direct image uploading
-- Automatic text fallback
-- Duplicate protection
-- Publish logging
+* Structured top header band
+* Structured bottom footer band
+* Contrast-aware typography
+* Editorial/news style presentation
 
-#### Instagram
+### Layout B — Modern Overlay
 
-- Publishing framework implemented
-- Image pipeline integrated
+Features:
+
+* Floating semi-transparent content card
+* Corner logo positioning
+* Adaptive internal spacing
+* Social-first appearance
+
+### Layout C — Minimalist Typography
+
+Features:
+
+* Soft vertical gradient mask
+* Large typography overlays
+* High readability CTA presentation
+
+### Rendering Engine Features
+
+* Aspect-ratio-independent scaling
+* Relative percentage positioning
+* Dynamic text sizing
+* Automatic line wrapping
+* Dynamic width calculations
+* Responsive logo placement
+
+### Typography System
+
+Bundled fonts:
+
+```text
+Inter-Regular.ttf
+Inter-SemiBold.ttf
+Inter-Bold.ttf
+```
+
+### Reliability Features
+
+* Native TrueType font bundling
+* Docker-safe font loading
+* PIL fallback chain
+* Non-crashing rendering guarantees
+
+---
+
+## Architecture Characteristics
+
+* Bytes-in / bytes-out architecture
+* Full attribution metadata tracking
+* Mock providers require zero API keys
+* Deterministic rendering behavior
+
+---
+
+# Publishing
+
+## Social Publishing
+
+### Facebook
+
+Implemented:
+
+* Direct high-resolution image uploads
+* Graph API `/photos` integration
+* Automatic text-only fallback
+* Publish logging
+* Duplicate protection
+
+### Instagram
+
+Implemented:
+
+* Publishing framework
+* Image-bytes routing compatibility
+* Shared publishing integration
 
 ### Publishing Controls
 
-- Named social target routing
-- Publisher-level duplicate protection
-- Safe Mode / Live Mode controls
-- Per-target enable/disable controls
-- Publish audit logging
-- Execution publish limits
-
-### WordPress Publishing
-
-- WordPress REST API integration
-- Draft publishing
-- Live publishing
-- Categories support
-- Tags support
-- Featured image support
-- Structured publish result tracking
-- Retry-aware publishing client
-- Reusable publishing interface
+* Named social target routing
+* Publisher-level duplicate protection
+* Safe Mode / Live Mode controls
+* Per-target enable/disable controls
+* Publish audit logging
+* Execution publish limits
 
 ---
 
-## Reliability
+## WordPress Publishing
 
-### Storage
+Features:
 
-- SQLite persistence
-- WAL-enabled database
+* WordPress REST API integration
+* Draft publishing
+* Live publishing
+* Categories support
+* Tags support
+* Featured image support
+* Structured publish result tracking
+* Retry-aware publishing client
+* Reusable publishing interface
 
-### Operational Safety
+---
 
-- Runtime locking
-- Duplicate detection
-- Structured logging
-- Health checks
-- Database backups
+# Reliability
 
-### Notifications
+## Persistence
 
-- Telegram notifications
-- Email notifications
+* SQLite persistence
+* WAL-enabled database
+
+## Runtime Safety
+
+* Runtime locking
+* Duplicate detection
+* Structured logging
+* Health checks
+* Database backups
+
+## Notifications
+
+* Telegram notifications
+* Email notifications
 
 ---
 
 # Current Repository Status
 
-| Property | Value |
-|-----------|---------|
-| Branch | `main` |
-| State | Stable |
-| Current Milestone | Phase 12A Complete |
-| Next Milestone | Phase 12B |
+| Property             | Value                       |
+| -------------------- | --------------------------- |
+| Branch               | `main`                      |
+| State                | Stable                      |
+| Current Milestone    | Phase 12B Complete          |
+| Next Milestone       | Phase 13                    |
+| Production Readiness | Multi-channel pilot capable |
 
 ---
 
@@ -180,32 +262,33 @@ Stock Image
 
 Status: 🟢 Green
 
-### Validated Pipelines
+### Validated Test Suites
 
-- Runtime locking tests ✅
-- Metadata storage tests ✅
-- Publishing pipeline tests ✅
-- Duplicate detection tests ✅
-- RSS ingestion tests ✅
-- Notification tests ✅
-- WordPress publishing tests ✅
-- Media foundation tests ✅
-- Media composition tests ✅
-- Social media image publishing tests (Phase 12A) ✅
+* Runtime locking tests ✅
+* Metadata storage tests ✅
+* Publishing pipeline tests ✅
+* Duplicate detection tests ✅
+* RSS ingestion tests ✅
+* Notification tests ✅
+* WordPress publishing tests ✅
+* Media foundation tests ✅
+* Media composition tests ✅
+* Social image publishing tests (Phase 12A) ✅
+* Visual branding layout tests (Phase 12B) ✅
 
-All automated validation pipelines are currently passing.
+All known automated validation pipelines are currently passing.
 
 ---
 
 # Development Environment
 
-| Item | Value |
-|--------|---------|
-| Host | Ubuntu VPS (1blu Dedicated Server) |
-| Client | VS Code Remote SSH |
-| Runtime | Docker Engine + Docker Compose V2 |
+| Item            | Value                               |
+| --------------- | ----------------------------------- |
+| Host            | Ubuntu VPS (1blu Dedicated Server)  |
+| Client          | VS Code Remote SSH                  |
+| Runtime         | Docker Engine + Docker Compose V2   |
 | Repository Path | `/home/deployer/repos/contentpilot` |
-| Primary Branch | `main` |
+| Primary Branch  | `main`                              |
 
 ---
 
@@ -222,24 +305,28 @@ contentpilot/
 ├── shared/
 │   ├── ai/
 │   ├── social/
-│   │   ├── __init__.py
-│   │   ├── exceptions.py
-│   │   ├── models.py
-│   │   ├── publisher.py
 │   │   ├── facebook.py
 │   │   └── instagram.py
 │   │
 │   ├── wordpress/
 │   ├── ingestion/
-│   │
 │   ├── content/
-│   │   ├── __init__.py
-│   │   ├── models.py
 │   │   ├── storage.py
 │   │   ├── asset_builder.py
 │   │   └── wordpress_media.py
 │   │
 │   ├── media/
+│   │   ├── image_generation.py
+│   │   ├── image_sourcing.py
+│   │   ├── image_processing.py
+│   │   ├── image_composition.py
+│   │   ├── featured_image.py
+│   │   ├── social_formatter.py
+│   │   ├── branding.py
+│   │   ├── layouts.py
+│   │   ├── utils.py
+│   │   └── assets/fonts/
+│   │
 │   ├── runtime.py
 │   ├── store.py
 │   ├── notify.py
@@ -248,21 +335,8 @@ contentpilot/
 │   └── config.py
 │
 ├── infra/
-│   ├── docker/
-│   ├── compose/
-│   └── cron/
-│
 ├── scripts/
-│   ├── test_phase12a_social_images.py
-│   ├── test_media_foundation.py
-│   └── test_media_composition.py
-│
 └── data/
-    ├── db/
-    ├── logs/
-    ├── cache/
-    ├── media/
-    └── exports/
 ```
 
 ---
@@ -271,65 +345,58 @@ contentpilot/
 
 ## Module Isolation
 
-- One module = one deployable unit
-- No cross-module dependencies
-- Business logic belongs inside modules
+* One module = one deployable unit
+* No cross-module dependencies
+* Business logic remains inside modules
 
 ## Shared Platform Layer
 
-- Generic reusable functionality only
-- No module-specific assumptions
-- Stable interfaces
+* Generic reusable functionality only
+* No module-specific assumptions
+* Stable interfaces
 
 ## Configuration
 
-- Environment-driven only
-- No hardcoded credentials
-- No embedded secrets
+* Environment-driven only
+* No hardcoded credentials
+* No embedded secrets
 
 ## Reliability
 
-- Idempotent execution
-- Retry-safe processing
-- Observability-first architecture
+* Idempotent execution
+* Retry-safe processing
+* Observability-first design
 
 ## Runtime Philosophy
 
-- Docker-first development
+* Docker-first development
 
 ---
 
 # Implemented Phases
 
-| Phase | Name | Status |
-|---------|---------|---------|
-| Phase 1 | Docker Foundation & Skeleton Setup | ✅ Complete |
-| Phase 2 | Daily News Core Module | ✅ Complete |
-| Phase 3 | Social Publishing Layer | ✅ Complete |
-| Phase 4 | Persistence & Deduplication Foundation | ✅ Complete |
-| Phase 5 | Named Social Target Routing | ✅ Complete |
-| Phase 6 | Runtime, Scheduler & Alerts | ✅ Complete |
-| Phase 6.5 | Observability & Operational Stabilization | ✅ Complete |
-| Phase 7 | RSS News Ingestion Pipeline | ✅ Complete |
-| Phase 8 | Live Pilot Hardening & Credential Activation | ✅ Complete |
-| Phase 9 | WordPress Publishing Layer | ✅ Complete |
-| Phase 10 | Media & Asset Generation Layer | ✅ Complete |
-| Phase 11 | Content Asset Pipeline | ✅ Complete |
-| Phase 12A | Social Media Image Publishing | ✅ Complete |
+| Phase | Name                                         | Status |
+| ----- | -------------------------------------------- | ------ |
+| 1     | Docker Foundation & Skeleton Setup           | ✅      |
+| 2     | Daily News Core Module                       | ✅      |
+| 3     | Social Publishing Layer                      | ✅      |
+| 4     | Persistence & Deduplication Foundation       | ✅      |
+| 5     | Named Social Target Routing                  | ✅      |
+| 6     | Runtime, Scheduler & Alerts                  | ✅      |
+| 6.5   | Observability & Operational Stabilization    | ✅      |
+| 7     | RSS Ingestion Pipeline                       | ✅      |
+| 8     | Live Pilot Hardening & Credential Activation | ✅      |
+| 9     | WordPress Publishing Layer                   | ✅      |
+| 10    | Media & Asset Generation Layer               | ✅      |
+| 11    | Content Asset Pipeline                       | ✅      |
+| 12A   | Social Media Image Publishing                | ✅      |
+| 12B   | Visual Branding & Template System            | ✅      |
 
 ---
 
-# Phase 12 — Visual Branding & Production Reliability
+# Phase 12B — Visual Branding & Template System
 
 ## Status
-
-🚧 IN PROGRESS
-
----
-
-## Phase 12A — Social Media Image Publishing
-
-### Status
 
 ✅ COMPLETE
 
@@ -337,330 +404,113 @@ contentpilot/
 
 ### Goal
 
-Integrate saved media asset bundles directly into the social publishing layer to enable high-resolution image publishing with fail-safe architecture.
+Implement a responsive, template-driven visual branding and CTA overlay layer supporting:
+
+* Auto-wrapping
+* Dynamic layouts
+* Bundled local assets
+* Docker-safe rendering
+* Multi-ratio compatibility
 
 ### Implemented
 
-#### Facebook `/photos` Support
+#### shared/media/utils.py
 
-File:
+* Relative coordinate calculations
+* Relative sizing calculations
+* Dynamic typography sizing
+* Auto-wrap algorithms
+* Font fallback helpers
 
-```text
-shared/social/facebook.py
-```
+#### shared/media/branding.py
 
-Features:
+* BrandProfile dataclass
+* CTA configuration support
+* Color configuration support
+* Website configuration support
+* Logo configuration support
+* Fail-safe apply_branding() wrapper
 
-- Graph API `/photos` endpoint publishing
-- 30-second timeout protection
-- Network exception handling
-- Automatic fallback to text-only publishing
-- Pipeline-safe behavior
+#### shared/media/layouts.py
 
-#### Publisher Layer Updates
+Layout A:
 
-File:
+* Header/footer bands
 
-```text
-shared/social/publisher.py
-```
+Layout B:
 
-Features:
+* Floating content card
+* Corner logo
 
-- Image byte routing
-- Image name routing
-- Unified content dictionary support
+Layout C:
 
-#### Instagram Compatibility Fix
+* Gradient overlay
+* Minimalist typography
 
-File:
-
-```text
-shared/social/instagram.py
-```
-
-Added:
-
-```python
-image_bytes: bytes | None = None
-```
-
-Prevents runtime signature mismatches.
-
-#### Social Image Selection
-
-File:
+#### Embedded Assets
 
 ```text
-modules/daily_news/runner.py
+shared/media/assets/fonts/
+
+Inter-Regular.ttf
+Inter-SemiBold.ttf
+Inter-Bold.ttf
 ```
 
-Added deterministic image selection hierarchy:
+#### Asset Pipeline Integration
 
 ```text
-facebook_landscape
-→ featured
-→ facebook_square
+shared/content/asset_builder.py
 ```
 
-Used for:
-
-- Single-topic execution
-- RSS execution
-
-#### Test Suite
-
-File:
+Branding insertion point:
 
 ```text
-scripts/test_phase12a_social_images.py
+MEDIA_BRANDING_ENABLED=true
 ```
-
-Result:
-
-- 8/8 tests passing
-- Fully offline
-- Docker validated
-
----
-
-# Phase 11 — Content Asset Pipeline
-
-## Status
-
-✅ COMPLETE
-
-Completed: 2026-06-01
-
-## Goal
-
-Build reusable content asset packaging and production integration workflow.
-
-### Phase 11A — Asset Bundle Storage
-
-Implemented:
-
-```text
-shared/content/
-├── models.py
-├── storage.py
-├── asset_builder.py
-└── README.md
-```
-
-Storage layout:
-
-```text
-data/media/YYYY/MM/DD/article-slug/
-
-featured.jpg
-facebook_landscape.jpg
-facebook_square.jpg
-instagram_square.jpg
-instagram_portrait.jpg
-story.jpg
-metadata.json
-article.md
-```
-
-Validation:
-
-- 11/11 tests passing
-- Fully offline
-- Docker validated
-
----
-
-### Phase 11B — Production Asset Integration
-
-Implemented:
-
-```text
-shared/content/wordpress_media.py
-```
-
-Capabilities:
-
-- WordPress media uploads
-- Retry logic
-- Exponential backoff
-- Failure-safe result objects
-
-Added configuration:
-
-```python
-MediaConfig
-get_media_config()
-get_wordpress_config()
-```
-
-Added execution metrics:
-
-- assets_generated
-- bundles_created
-- images_generated
-- images_uploaded
-- wordpress_media_failures
-
-Validation:
-
-- 13/13 integration tests passing
-- No regressions
-
----
-
-# Phase 10 — Media & Asset Generation Layer
-
-## Status
-
-✅ COMPLETE
-
-Completed: 2026-06-01
-
-### Major Features
-
-#### Media Layer
-
-```text
-shared/media/
-├── image_generation.py
-├── image_sourcing.py
-├── image_processing.py
-├── image_composition.py
-├── featured_image.py
-└── social_formatter.py
-```
-
-#### Supported Social Formats
-
-| Format | Dimensions |
-|----------|-------------|
-| Facebook Landscape | 1200 × 630 |
-| Facebook Square | 1080 × 1080 |
-| Instagram Square | 1080 × 1080 |
-| Instagram Portrait | 1080 × 1350 |
-| Story | 1080 × 1920 |
 
 #### Test Coverage
 
-- Foundation tests: 50
-- Composition tests: 62
+```text
+scripts/test_phase12b_branding.py
+```
 
-Total:
+Coverage:
 
-- 112 tests passing
+* 25 rendering tests
+* Multiple aspect ratios
+* Missing logos
+* Font fallbacks
+* Layout selection validation
+* Rendering safety checks
 
 ---
 
-# Active Modules
+# Environment Variables
 
-## daily_news
+## Media Pipeline
 
-Status: Production-capable
+| Variable               | Default         |
+| ---------------------- | --------------- |
+| ENABLE_MEDIA_ASSETS    | true            |
+| ENABLE_FEATURED_IMAGES | true            |
+| ENABLE_SOCIAL_IMAGES   | true            |
+| MEDIA_BRANDING_ENABLED | false           |
+| MEDIA_ADS_ENABLED      | false           |
+| MEDIA_STORAGE_DIR      | /app/data/media |
 
-Capabilities:
+## Branding System
 
-- RSS ingestion
-- Topic fallback generation
-- AI summarization
-- Facebook publishing
-- WordPress publishing
-- Media asset generation
-- Social image publishing
-- Deduplication
-- Runtime metrics
-
----
-
-# Deduplication Architecture
-
-## RSS Article Deduplication
-
-Purpose:
-
-Prevent feed article reprocessing.
-
-Fingerprint:
-
-```text
-sha256(title + link)
-```
-
-Storage:
-
-```text
-rss_articles
-```
-
-Scope:
-
-```text
-ingestion layer
-```
-
----
-
-## Topic-Level Deduplication
-
-Purpose:
-
-Prevent duplicate publishing.
-
-Fingerprint:
-
-```text
-hash(normalized topic)
-```
-
-Storage:
-
-```text
-publish_history
-```
-
-Scope:
-
-```text
-publishing layer
-```
-
----
-
-# Architecture Decisions
-
-## Docker Compose Before Kubernetes
-
-Chosen to maintain operational simplicity on a single VPS.
-
-## SQLite Before PostgreSQL
-
-Chosen to reduce infrastructure complexity while preserving persistence.
-
-## Reliability Before Features
-
-Operational safety and observability are prioritized ahead of feature expansion.
-
-## Shared Services Stay Lightweight
-
-Avoid unnecessary framework complexity.
-
-## WordPress As Output Adapter
-
-WordPress remains a publishing destination only.
-
-Generation and publishing stay intentionally decoupled.
-
-## Media Layer As Pure Bytes Pipeline
-
-All images travel through the system as raw bytes.
-
-File I/O only occurs at explicit storage boundaries.
-
-Benefits:
-
-- Fully testable
-- Mock-friendly
-- Filesystem-independent core logic
+| Variable                  | Default |
+| ------------------------- | ------- |
+| MEDIA_BRAND_NAME          | ""      |
+| MEDIA_BRAND_TAGLINE       | ""      |
+| MEDIA_BRAND_CTA           | ""      |
+| MEDIA_BRAND_WEBSITE       | ""      |
+| MEDIA_BRAND_LAYOUT        | B       |
+| MEDIA_BRAND_PRIMARY_COLOR | #0F172A |
+| MEDIA_BRAND_ACCENT_COLOR  | #38BDF8 |
+| MEDIA_BRAND_LOGO_PATH     | null    |
 
 ---
 
@@ -668,64 +518,73 @@ Benefits:
 
 ## Social Publishing
 
-- Instagram live publishing not fully validated
+* Instagram production validation still limited
 
 ## Media
 
-- No video generation pipeline
-- Stability AI provider stub
-- Ideogram provider stub
-- Flux provider stub
+* No video generation pipeline
+* Stability AI provider not activated
+* Ideogram provider not activated
+* Flux provider not activated
 
-## Multi-Module Expansion
+## Platform Expansion
 
-- Only `daily_news` is production-ready
+Currently production-ready:
 
-## User-Facing Content Creation
+```text
+daily_news
+```
 
-Not yet implemented:
+Future modules:
 
-- Article request workflow
-- Content dashboard
-- Multi-user management
+* article_publisher
+* deals_engine
+* social_tips
+* social_video
 
 ---
 
 # Next Major Milestone
 
-# Phase 12B — Visual Branding & CTA System
+# Phase 13 — Scheduler Service & Execution Queues
 
 ## Goal
 
-Develop and integrate a responsive branding overlay layer supporting:
-
-- Custom layouts
-- Logos
-- Typography
-- Font management
-- Brand colors
-- CTA blocks
-- Aspect-ratio-aware rendering
+Transition ContentPilot away from system-level cron execution toward an integrated scheduling architecture based on APScheduler and future queue-worker orchestration.
 
 ## Objectives
 
-### Branding System
+### Scheduling
 
-- Responsive relative positioning
-- Social-format-safe rendering
-- Layout presets
+* Database-driven schedules
+* Dynamic job registration
+* Environment-controlled timing
 
-### Font Management
+### Queue Layer
 
-- Local open-source fonts
-- Docker-safe deployment
-- Non-root compatible volume handling
+* Persistent task queues
+* Worker isolation
+* Failure-safe execution
 
 ### Reliability
 
-- Fully fail-safe composition
-- Rendering failures never break publishing
-- Graceful degradation paths
+* Automatic retries
+* Backoff support
+* Execution tracing
+* Metrics collection
+
+### Observability
+
+* Centralized scheduler monitoring
+* Execution history tracking
+* Health monitoring integration
+
+### Architecture Requirements
+
+* Maintain module isolation
+* Preserve Docker-first runtime
+* APScheduler-first implementation
+* Future Celery/Redis migration path
 
 ---
 
@@ -742,7 +601,7 @@ Before making changes:
 
 ---
 
-# Preferred Development Loop
+# Preferred Development Workflow
 
 ```text
 Understand
@@ -756,19 +615,16 @@ Understand
 
 ---
 
-# Project Direction
+# Current Direction
 
-ContentPilot is evolving toward a modular AI-powered content operations platform with:
+ContentPilot is now a production-capable AI publishing platform with:
 
-- Automated news generation
-- Multi-channel publishing
-- Media generation
-- Social automation
-- WordPress automation
-- Future video generation
-- Future queue-based orchestration
-- Future multi-module ecosystem
+* RSS ingestion
+* AI content generation
+* WordPress publishing
+* Social publishing
+* Media generation
+* Responsive branding
+* Automated asset packaging
 
-Current focus remains:
-
-**Production reliability, branding integration, and controlled publishing pilots before major feature expansion.**
+The next architectural evolution focuses on centralized scheduling, execution orchestration, queue management, and operational scalability while preserving simplicity and maintainability.

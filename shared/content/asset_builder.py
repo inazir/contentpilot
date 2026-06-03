@@ -8,8 +8,9 @@ Output: AssetBundle (with all images generated and stored on disk)
 Uses existing shared/media services. Does NOT publish.
 Does NOT modify WordPress. Does NOT touch daily_news pipeline.
 
-Phase 11B will call build() to obtain an AssetBundle, then upload
-assets to WordPress media library and attach the featured image.
+Phase 11B: wired into daily_news runner with WordPress featured image upload.
+Phase 12B: applies visual branding overlay (Layout A/B/C) via shared/media/branding.py
+           when MEDIA_BRANDING_ENABLED=true.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ def _media_enabled() -> bool:
 
 class AssetBuilder:
     """
-    Orchestrates media generation and storage for a content article.
+    Orchestrates media generation, branding, and storage for a content article.
 
     Decoupled from any publisher. Call build() to get a ready AssetBundle.
 
@@ -110,12 +111,18 @@ class AssetBuilder:
         )
 
         logger.info(
-            "asset_builder_start | slug=%s | keywords=%s | branding=%s",
-            slug, keywords, branding_enabled,
+            "asset_builder_start | slug=%s | keywords=%s | branding=%s | ads=%s",
+            slug, keywords, branding_enabled, ads_enabled,
         )
 
-        image_data = self._generate_images(title, summary, keywords, branding_enabled=branding_enabled,
-    ads_enabled=ads_enabled)
+        image_data = self._generate_images(
+            title, summary, keywords,
+            branding_enabled=branding_enabled,
+            ads_enabled=ads_enabled,
+        )
+
+        # Phase 12B: apply visual branding overlay to all generated images
+        image_data = self._apply_branding_overlay(image_data)
 
         result = self._storage.save(
             bundle=bundle,
@@ -135,6 +142,44 @@ class AssetBuilder:
             )
 
         return result
+
+    def _apply_branding_overlay(self, image_data: dict[str, bytes]) -> dict[str, bytes]:
+        """
+        Apply visual brand overlay (Layout A/B/C) to all generated images.
+
+        Only runs when MEDIA_BRANDING_ENABLED=true. If branding fails for any
+        image, the original unbranded bytes are preserved — pipeline never halts.
+
+        Returns the same dict, with branded bytes replacing originals where applied.
+        """
+        try:
+            from shared.media.branding import load_brand_profile, apply_branding
+            profile = load_brand_profile()
+        except ImportError as exc:
+            logger.warning(
+                "branding_import_failed | error=%s | skipping_branding", exc
+            )
+            return image_data
+
+        if not profile.enabled:
+            logger.debug("branding_skipped | reason=MEDIA_BRANDING_ENABLED=false")
+            return image_data
+
+        branded: dict[str, bytes] = {}
+        for key, raw_bytes in image_data.items():
+            try:
+                branded_bytes = apply_branding(raw_bytes, profile)
+                branded[key] = branded_bytes
+                logger.debug("branding_applied | key=%s | original=%d | branded=%d",
+                             key, len(raw_bytes), len(branded_bytes))
+            except Exception as exc:
+                logger.warning(
+                    "branding_image_failed | key=%s | error=%s | using_original",
+                    key, exc,
+                )
+                branded[key] = raw_bytes
+
+        return branded
 
     def _generate_images(
         self,
@@ -185,22 +230,19 @@ class AssetBuilder:
                 "asset_builder_media_import_failed | error=%s | skipping_images", exc
             )
             return results
-        
+
         config = ImageCompositionConfig(
-            branding=BrandingConfig(
-                enable=branding_enabled
-            ),
-            ads=AdConfig(
-                enable=ads_enabled
-            ),
+            branding=BrandingConfig(enable=branding_enabled),
+            ads=AdConfig(enable=ads_enabled),
         )
+
         # Featured image
         try:
             featured_result = get_featured_image(
                 title=title,
                 summary=summary,
                 keywords=keywords,
-                config=config, 
+                config=config,
                 save_to_disk=False,
             )
             if featured_result.success and featured_result.composed:
