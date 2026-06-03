@@ -6,3 +6,4 @@ requests>=2.31.0
 # Anthropic API client
 anthropic>=0.25.0
 Pillow>=10.0.0
+apscheduler>=3.10.0
