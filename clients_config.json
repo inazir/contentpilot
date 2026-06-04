@@ -1,0 +1,173 @@
+{
+  "config_metadata": {
+    "environment": "development_mvp",
+    "note": "Credentials must be referenced by environment variable keys only. Plaintext secrets are strictly prohibited in this configuration array."
+  },
+  "clients": [
+    {
+      "client_id": "finance_client_a",
+      "client_slug": "financeadvisor-pro",
+      "client_name": "FinanceAdvisor Pro",
+      "parent_brand_slug": "germanysupport",
+      "parent_brand_id": 1,
+      "business_type": "finance_consulting",
+      "enabled": true,
+      "routing_keywords": [
+        "investing", "stocks", "bonds", "portfolio", "market", "trading",
+        "retirement", "etf", "dividend", "interest rates", "inflation",
+        "federal reserve", "fed", "cryptocurrency", "bitcoin", "finance"
+      ],
+      "routing_priority": 10,
+      "wordpress": {
+        "base_url": "https://financeadvisor.example.com",
+        "username": "wp_user_finance_a",
+        "app_password_env": "FINANCE_A_WP_APP_PASSWORD",
+        "default_status": "draft",
+        "default_categories": [1, 5],
+        "default_tags": [],
+        "timeout_seconds": 30
+      },
+      "facebook": {
+        "page_id_env": "FINANCE_A_FB_PAGE_ID",
+        "access_token_env": "FINANCE_A_FB_ACCESS_TOKEN",
+        "enabled": true
+      },
+      "publishing_preferences": {
+        "formats": ["text_link", "image_post"],
+        "image_post": {
+          "enabled": true,
+          "image_provider": "mock",
+          "branding_layout": "A"
+        },
+        "reel": {
+          "enabled": false
+        },
+        "max_posts_per_day": 3
+      }
+    },
+    {
+      "client_id": "finance_client_b",
+      "client_slug": "wealthgrow-insights",
+      "client_name": "WealthGrow Insights",
+      "parent_brand_slug": "germanysupport",
+      "parent_brand_id": 1,
+      "business_type": "finance_consulting",
+      "enabled": true,
+      "routing_keywords": [
+        "wealth management", "financial planning", "tax", "real estate",
+        "property", "mortgage", "savings", "budget", "personal finance",
+        "401k", "ira", "insurance", "annuity"
+      ],
+      "routing_priority": 8,
+      "wordpress": {
+        "base_url": "https://wealthgrow.example.com",
+        "username": "wp_user_wealth_b",
+        "app_password_env": "WEALTH_B_WP_APP_PASSWORD",
+        "default_status": "draft",
+        "default_categories": [2],
+        "default_tags": [],
+        "timeout_seconds": 30
+      },
+      "facebook": {
+        "page_id_env": "WEALTH_B_FB_PAGE_ID",
+        "access_token_env": "WEALTH_B_FB_ACCESS_TOKEN",
+        "enabled": true
+      },
+      "publishing_preferences": {
+        "formats": ["text_link"],
+        "image_post": {
+          "enabled": false,
+          "branding_layout": "B"
+        },
+        "reel": {
+          "enabled": false
+        },
+        "max_posts_per_day": 5
+      }
+    },
+    {
+      "client_id": "tech_saas_client_c",
+      "client_slug": "saasweekly",
+      "client_name": "SaaSWeekly",
+      "parent_brand_slug": "technewshub",
+      "parent_brand_id": 2,
+      "business_type": "tech_saas",
+      "enabled": true,
+      "routing_keywords": [
+        "software", "saas", "startup", "app", "platform", "api",
+        "developer", "cloud", "ai", "machine learning", "automation",
+        "productivity", "tools", "tech", "digital", "launch", "product",
+        "subscription", "b2b", "enterprise software"
+      ],
+      "routing_priority": 9,
+      "wordpress": {
+        "base_url": "https://saasweekly.example.com",
+        "username": "wp_user_saas_c",
+        "app_password_env": "SAAS_C_WP_APP_PASSWORD",
+        "default_status": "publish",
+        "default_categories": [3, 7],
+        "default_tags": [],
+        "timeout_seconds": 30
+      },
+      "facebook": {
+        "page_id_env": "SAAS_C_FB_PAGE_ID",
+        "access_token_env": "SAAS_C_FB_ACCESS_TOKEN",
+        "enabled": true
+      },
+      "publishing_preferences": {
+        "formats": ["text_link", "image_post", "reel"],
+        "image_post": {
+          "enabled": true,
+          "image_provider": "mock",
+          "branding_layout": "B"
+        },
+        "reel": {
+          "enabled": true,
+          "video_url_env": "SAAS_C_REEL_VIDEO_URL"
+        },
+        "max_posts_per_day": 10
+      }
+    },
+    {
+      "client_id": "deals_client_d",
+      "client_slug": "dealhunterdaily",
+      "client_name": "DealHunterDaily",
+      "parent_brand_slug": "dealalarm",
+      "parent_brand_id": 3,
+      "business_type": "deals_affiliate",
+      "enabled": true,
+      "routing_keywords": [
+        "deal", "discount", "sale", "offer", "promo", "coupon", "savings",
+        "off", "limited time", "free shipping", "buy one", "cashback",
+        "black friday", "cyber monday", "clearance", "bargain"
+      ],
+      "routing_priority": 7,
+      "wordpress": {
+        "base_url": "https://dealhunter.example.com",
+        "username": "wp_user_deals_d",
+        "app_password_env": "DEALS_D_WP_APP_PASSWORD",
+        "default_status": "publish",
+        "default_categories": [4],
+        "default_tags": [],
+        "timeout_seconds": 30
+      },
+      "facebook": {
+        "page_id_env": "DEALS_D_FB_PAGE_ID",
+        "access_token_env": "DEALS_D_FB_ACCESS_TOKEN",
+        "enabled": true
+      },
+      "publishing_preferences": {
+        "formats": ["image_post"],
+        "image_post": {
+          "enabled": true,
+          "image_provider": "mock",
+          "branding_layout": "C"
+        },
+        "reel": {
+          "enabled": false
+        },
+        "max_posts_per_day": 20
+      }
+    }
+  ]
+}
