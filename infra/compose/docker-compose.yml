@@ -22,3 +22,5 @@ services:
     # Run container as host user to prevent root-owned files in mounted volumes
     user: "${DOCKER_UID}:${DOCKER_GID}"
     command: python3 -m shared.scheduler.scheduler_service
+  
+  

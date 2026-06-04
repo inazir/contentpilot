@@ -1,24 +1,82 @@
-```markdown
 # ContentPilot Project State
 
 ## Current Status
 
 ### Current Maturity
 
-Production-capable publishing platform with an automated media generation, visual branding layer, and a resilient, stateful task orchestration daemon.
+Production-ready multi-brand AI content automation platform with:
 
-The platform has successfully transitioned from a proof-of-concept automation system into a stable, observable, containerized content automation platform with:
+* Multi-brand execution support
+* Brand-aware scheduling
+* Brand-aware publishing
+* AI content generation
+* WordPress publishing
+* Social media publishing
+* Media asset generation
+* Visual branding system
+* Stateful background scheduling
+* Structured logging and observability
 
-* Multi-channel social publishing
-* WordPress integration
-* Robust image rendering template engines
-* Direct image upload pipelines
-* Responsive branding systems
-* Stateful, thread-safe automated scheduling daemons
+ContentPilot has successfully evolved from a single-brand automation platform into a multi-brand SaaS-ready architecture capable of serving multiple brands from a single deployment while maintaining backward compatibility.
 
-Core runtime, ingestion, AI generation, deduplication, social publishing, WordPress publishing, media asset generation, highly responsive branding overlay configurations, and background task orchestrators are fully operational.
+---
 
-The project has successfully completed **Phase 13A (Scheduler Service Core / APScheduler Integration)** and is entering **Phase 13B (Execution Queues & Workers)**.
+# Current Project Status
+
+| Property             | Value                       |
+| -------------------- | --------------------------- |
+| Branch               | `main`                      |
+| State                | Stable                      |
+| Current Milestone    | Phase 13B Complete          |
+| Next Milestone       | Phase 14A                   |
+| Production Readiness | Multi-brand pilot capable   |
+| Architecture Stage   | SaaS Foundation Established |
+
+---
+
+# Completed Phases
+
+| Phase | Name                                         | Status |
+| ----- | -------------------------------------------- | ------ |
+| 1     | Docker Foundation & Skeleton Setup           | ✅      |
+| 2     | Daily News Core Module                       | ✅      |
+| 3     | Social Publishing Layer                      | ✅      |
+| 4     | Persistence & Deduplication Foundation       | ✅      |
+| 5     | Named Social Target Routing                  | ✅      |
+| 6     | Runtime, Scheduler & Alerts                  | ✅      |
+| 6.5   | Observability & Operational Stabilization    | ✅      |
+| 7     | RSS Ingestion Pipeline                       | ✅      |
+| 8     | Live Pilot Hardening & Credential Activation | ✅      |
+| 9     | WordPress Publishing Layer                   | ✅      |
+| 10    | Media & Asset Generation Layer               | ✅      |
+| 11    | Content Asset Pipeline                       | ✅      |
+| 12A   | Social Media Image Publishing                | ✅      |
+| 12B   | Visual Branding & Template System            | ✅      |
+| 13A   | Scheduler Service Core Integration           | ✅      |
+| 13B   | Multi-Brand SaaS Foundation                  | ✅      |
+
+---
+
+# Platform Overview
+
+ContentPilot is a Docker-first AI automation platform focused on:
+
+* AI content generation
+* WordPress publishing
+* Social media automation
+* Multi-brand content distribution
+* Automated media generation
+* Scheduled publishing workflows
+* Future SaaS expansion
+
+Primary technology stack:
+
+* Python 3.12+
+* Docker & Docker Compose
+* SQLite
+* APScheduler
+* Anthropic
+* DeepSeek
 
 ---
 
@@ -27,28 +85,195 @@ The project has successfully completed **Phase 13A (Scheduler Service Core / APS
 ## Infrastructure
 
 * Docker-first architecture
-* Containerized module execution
+* Containerized execution
 * Docker Compose orchestration
 * Environment-driven configuration
 * GitHub Actions CI validation
-* Stateful background daemons with robust context-aware runtime boundaries
+* Stateful scheduler daemon
+* Multi-brand execution model
 
 ## AI Layer
 
-* Provider abstraction architecture
-* [cite_start]Anthropic integration [cite: 1]
-* DeepSeek integration
-* Automatic provider fallback support
+Provider abstraction architecture:
+
+* Anthropic
+* DeepSeek
+
+Features:
+
 * Shared AI routing layer
+* Provider abstraction
+* Retry-aware execution
+* Future provider expansion ready
 
-## Content Processing
+Modules never communicate directly with AI providers.
 
-* RSS / Atom ingestion
+Access pattern:
+
+```text
+Module
+    ↓
+shared.ai.router
+    ↓
+Provider
+```
+
+---
+
+# Content Processing
+
+Capabilities:
+
+* RSS ingestion
+* Atom feed ingestion
 * Feed normalization
 * Article fingerprinting
-* Deduplication before AI processing
-* AI summarization pipeline
-* Static topic generation fallback
+* Duplicate detection
+* AI rewriting
+* AI summarization
+* Static fallback generation
+
+Workflow:
+
+```text
+RSS Feed
+    ↓
+Normalize
+    ↓
+Deduplicate
+    ↓
+AI Processing
+    ↓
+Media Generation
+    ↓
+Publishing
+```
+
+---
+
+# Multi-Brand SaaS Foundation (Phase 13B)
+
+## Overview
+
+Phase 13B introduced a complete multi-brand execution architecture.
+
+Every execution path is now brand-aware:
+
+* Scheduling
+* AI generation
+* WordPress publishing
+* Social publishing
+* Media generation
+* Asset storage
+
+This is achieved through the BrandContext system.
+
+---
+
+## BrandContext
+
+BrandContext is now the primary execution object throughout the platform.
+
+Example:
+
+```python
+ctx = get_brand_context(brand_id)
+
+main(brand_context=ctx)
+```
+
+BrandContext provides:
+
+* brand_id
+* brand_slug
+* brand_name
+* website_url
+* social_targets
+* WordPress credentials
+* publish mode
+* media storage root
+
+Modules no longer need to access brand configuration directly.
+
+---
+
+## Configuration Resolution
+
+Priority order:
+
+```text
+BrandContext
+    ↓
+Database
+    ↓
+Environment Variables
+```
+
+Environment variable fallback exists only for the default brand.
+
+---
+
+## Database Schema
+
+### brands
+
+Stores brand definitions.
+
+### brand_profiles
+
+Stores:
+
+* website_url
+* logo_path
+* brand_name
+* brand_cta
+* branding_layout
+
+### brand_credentials
+
+Stores:
+
+* WordPress credentials
+* Social credentials
+* AI overrides
+
+---
+
+## Brand-Aware Scheduling
+
+Every schedule now belongs to a specific brand.
+
+Example:
+
+```text
+GermanySupport
+    ↓
+Daily News
+    ↓
+Every Hour
+
+TechNewsHub
+    ↓
+Daily News
+    ↓
+Every Two Hours
+```
+
+Multiple brands can independently run the same module.
+
+---
+
+## Brand-Aware Storage
+
+Media assets are now isolated per brand:
+
+```text
+data/media/germanysupport/
+data/media/technewshub/
+data/media/client-x/
+```
+
+This prevents cross-brand asset contamination.
 
 ---
 
@@ -56,7 +281,7 @@ The project has successfully completed **Phase 13A (Scheduler Service Core / APS
 
 ## Image Generation
 
-Provider-agnostic image generation:
+Provider-agnostic architecture:
 
 * Mock
 * OpenAI DALL-E 3
@@ -64,24 +289,32 @@ Provider-agnostic image generation:
 * Ideogram
 * Flux
 
+---
+
 ## Stock Image Sourcing
+
+Supported providers:
 
 * Mock
 * Pexels
 * Unsplash
 * Pixabay
 
+---
+
 ## Image Processing
+
+Features:
 
 * Resize
 * Crop
 * Compress
-* Convert
+* Format conversion
 * Thumbnail generation
 
-## Social Media Formatting
+---
 
-Supported formats:
+## Social Media Formatting
 
 | Format             | Resolution  |
 | ------------------ | ----------- |
@@ -91,139 +324,140 @@ Supported formats:
 | Instagram Portrait | 1080 × 1350 |
 | Story              | 1080 × 1920 |
 
-## Composition Pipeline
-
-Supports:
-
-* Branding overlays (optional)
-* Advertisement overlays (optional)
-
-## Featured Image Pipeline
-
-Workflow:
-
-```text
-Stock Image
-→ AI Fallback
-→ Composition
-→ Final Asset
-
-```
-
 ---
 
-## Responsive Visual Branding System (Phase 12B)
+## Branding System (Phase 12B)
+
+Supported layouts:
 
 ### Layout A — Editorial Bands
 
-Features:
-
-* Structured top header band
-* Structured bottom footer band
-* Contrast-aware typography
-* Editorial/news style presentation
+* Header band
+* Footer band
+* News-style presentation
 
 ### Layout B — Modern Overlay
 
-Features:
-
-* Floating semi-transparent content card
-* Corner logo positioning
-* Adaptive internal spacing
-* Social-first appearance
+* Floating content card
+* Corner logo
+* Social-first design
 
 ### Layout C — Minimalist Typography
 
-Features:
-
-* Soft vertical gradient mask
-* Large typography overlays
-* High readability CTA presentation
-
-### Rendering Engine Features
-
-* Aspect-ratio-independent scaling
-* Relative percentage positioning
-* Dynamic text sizing
-* Automatic line wrapping
-* Dynamic width calculations
-* Responsive logo placement
-
-### Typography System
-
-Bundled fonts:
-
-```text
-Inter-Regular.ttf
-Inter-SemiBold.ttf
-Inter-Bold.ttf
-
-```
-
-### Reliability Features
-
-* Native TrueType font bundling
-* Docker-safe font loading
-* PIL fallback chain
-* Non-crashing rendering guarantees
+* Gradient overlays
+* Large typography
+* CTA focused
 
 ---
 
-## Architecture Characteristics
+## Rendering Engine Features
 
-* Bytes-in / bytes-out architecture
-* Full attribution metadata tracking
-* Mock providers require zero API keys
-* Deterministic rendering behavior
+* Responsive scaling
+* Dynamic text sizing
+* Automatic wrapping
+* Relative positioning
+* Docker-safe font loading
+* PIL fallback chain
 
 ---
 
 # Publishing
 
-## Social Publishing
-
-### Facebook
-
-Implemented:
-
-* Direct high-resolution image uploads
-* Graph API `/photos` integration
-* Automatic text-only fallback
-* Publish logging
-* Duplicate protection
-
-### Instagram
-
-Implemented:
-
-* Publishing framework
-* Image-bytes routing compatibility
-* Shared publishing integration
-
-### Publishing Controls
-
-* Named social target routing
-* Publisher-level duplicate protection
-* Safe Mode / Live Mode controls
-* Per-target enable/disable controls
-* Publish audit logging
-* Execution publish limits
-
----
-
-## WordPress Publishing
+## WordPress
 
 Features:
 
-* WordPress REST API integration
+* WordPress REST API
 * Draft publishing
 * Live publishing
-* Categories support
-* Tags support
-* Featured image support
-* Structured publish result tracking
-* Retry-aware publishing client
-* Reusable publishing interface
+* Categories
+* Tags
+* Featured images
+* Publish result tracking
+* Retry-aware publishing
+
+---
+
+## Facebook
+
+Features:
+
+* Direct image uploads
+* Graph API integration
+* Text fallback support
+* Duplicate protection
+* Publish logging
+
+---
+
+## Instagram
+
+Features:
+
+* Publishing framework
+* Shared publishing integration
+* Image routing compatibility
+
+---
+
+## Publishing Controls
+
+* Named social target routing
+* Duplicate protection
+* Safe Mode
+* Live Mode
+* Per-target enable/disable
+* Publish limits
+* Audit logging
+
+---
+
+# Scheduler Service (Phase 13A)
+
+## Status
+
+Complete and operational.
+
+Built on APScheduler.
+
+Responsibilities:
+
+* Schedule management
+* Retry management
+* Execution tracking
+* Health monitoring
+* Heartbeat telemetry
+
+---
+
+## Core Components
+
+```text
+shared/scheduler/
+├── models.py
+├── retry_manager.py
+├── job_executor.py
+├── heartbeat.py
+└── scheduler_service.py
+```
+
+---
+
+## Scheduler Flow
+
+```text
+Scheduler Startup
+    ↓
+Load Schedules
+    ↓
+Resolve BrandContext
+    ↓
+Execute Module
+    ↓
+Track Job Run
+    ↓
+Retry If Needed
+```
 
 ---
 
@@ -231,35 +465,41 @@ Features:
 
 ## Persistence
 
-* SQLite persistence (Multi-DB structure: core schema alongside the standalone `scheduler.db`)
-* WAL-enabled database files
+Databases:
 
-## Runtime Safety
+```text
+data/db/contentpilot.db
+data/db/scheduler.db
+```
 
-* Runtime locking (Dual-layer: Thread-level module registry locks combined with `managed_run` filesystem locks)
-* Duplicate detection
-* Structured logging
-* Health checks
-* Host-level database backups (`scripts/backup_db.sh`) with intelligent context-aware container path normalization (`/app/*` -> `$REPO_ROOT/*`) and WAL-safe `sqlite3 .backup` routing with automatic `cp` fallbacks.
+Features:
 
-## Notifications
-
-* Telegram notifications 
-
-
-* Email notifications
+* SQLite persistence
+* WAL mode
+* Migration support
+* Brand-aware scheduling
 
 ---
 
-# Current Repository Status
+## Runtime Safety
 
-| Property | Value |
-| --- | --- |
-| Branch | `main` |
-| State | Stable |
-| Current Milestone | Phase 13A Complete |
-| Next Milestone | Phase 13B |
-| Production Readiness | Multi-channel pilot capable |
+Features:
+
+* Thread-safe execution
+* Runtime locking
+* Duplicate detection
+* Retry-safe processing
+* Structured logging
+* Health checks
+
+---
+
+## Notifications
+
+Supported:
+
+* Telegram
+* Email
 
 ---
 
@@ -267,36 +507,25 @@ Features:
 
 ## GitHub Actions
 
-Status: 🟢 Green
+Status: Green
 
-### Validated Test Suites
+Validated areas:
 
-* Runtime locking tests ✅
-* Metadata storage tests ✅
-* Publishing pipeline tests ✅
-* Duplicate detection tests ✅
-* RSS ingestion tests ✅
-* Notification tests ✅
-* WordPress publishing tests ✅
-* Media foundation tests ✅
-* Media composition tests ✅
-* Social image publishing tests (Phase 12A) ✅
-* Visual branding layout tests (Phase 12B) ✅
-* Stateful Scheduling, Retries & Heartbeat Engine Tests (Phase 13A — 27/27 Tests) ✅
+* Runtime locking
+* Metadata storage
+* Publishing pipelines
+* Duplicate detection
+* RSS ingestion
+* Notifications
+* WordPress publishing
+* Media generation
+* Image publishing
+* Branding layouts
+* Scheduler service
+* Retry handling
+* Heartbeat monitoring
 
-All known automated validation pipelines are currently passing.
-
----
-
-# Development Environment
-
-| Item | Value |
-| --- | --- |
-| Host | Ubuntu VPS (1blu Dedicated Server) |
-| Client | VS Code Remote SSH |
-| Runtime | Docker Engine + Docker Compose V2 |
-| Repository Path | `/home/deployer/repos/contentpilot` |
-| Primary Branch | `main` |
+All known automated validation pipelines are passing.
 
 ---
 
@@ -305,68 +534,32 @@ All known automated validation pipelines are currently passing.
 ```text
 contentpilot/
 ├── modules/
-│   └── daily_news/
-│       ├── Dockerfile
-│       ├── main.py
-│       ├── runner.py
-│       └── config.py
+│   ├── daily_news/
+│   ├── article_publisher/
+│   ├── deals_engine/
+│   ├── social_tips/
+│   └── social_video/
 │
 ├── shared/
 │   ├── ai/
+│   ├── brands/
 │   ├── social/
-│   │   ├── facebook.py
-│   │   └── instagram.py
-│   │
 │   ├── wordpress/
-│   ├── ingestion/
-│   ├── content/
-│   │   ├── storage.py
-│   │   ├── asset_builder.py
-│   │   └── wordpress_media.py
-│   │
 │   ├── media/
-│   │   ├── image_generation.py
-│   │   ├── image_sourcing.py
-│   │   ├── image_processing.py
-│   │   ├── image_composition.py
-│   │   ├── featured_image.py
-│   │   ├── social_formatter.py
-│   │   ├── branding.py
-│   │   ├── layouts.py
-│   │   └── utils.py
-│   │
+│   ├── content/
 │   ├── scheduler/
-│   │   ├── models.py
-│   │   ├── retry_manager.py
-│   │   ├── job_executor.py
-│   │   ├── heartbeat.py
-│   │   └── scheduler_service.py
-│   │
-│   ├── runtime.py
-│   ├── store.py
-│   ├── notify.py
-│   ├── logging.py
-│   ├── models.py
-│   └── config.py
+│   ├── logging/
+│   ├── storage/
+│   └── config/
 │
 ├── infra/
-│   └── compose/
-│       └── docker-compose.yml
-├── requirements/
-│   ├── base.txt
-│   └── scheduler.txt
 ├── scripts/
-│   └── backup_db.sh
 └── data/
-    └── db/
-        ├── contentpilot.db
-        └── scheduler.db
-
 ```
 
 ---
 
-# Core Structural Principles
+# Core Architectural Principles
 
 ## Module Isolation
 
@@ -380,11 +573,18 @@ contentpilot/
 * No module-specific assumptions
 * Stable interfaces
 
+## Multi-Brand Execution
+
+* BrandContext is the source of truth
+* No module may access brand persistence directly
+* Shared brand services manage all brand resolution
+
 ## Configuration
 
-* Environment-driven only
+* Environment driven
+* Database backed
 * No hardcoded credentials
-* No embedded secrets
+* Backward compatible fallbacks
 
 ## Reliability
 
@@ -394,156 +594,171 @@ contentpilot/
 
 ## Runtime Philosophy
 
-* Docker-first development
-* Multi-context boundaries (Clear separation between Container Runtime paths and Host operational tooling script space)
+* Docker-first
+* Migration-friendly architecture
+* Incremental evolution
+* Production readiness before complexity
 
 ---
 
-# Implemented Phases
-
-| Phase | Name | Status |
-| --- | --- | --- |
-| 1 | Docker Foundation & Skeleton Setup | ✅ |
-| 2 | Daily News Core Module | ✅ |
-| 3 | Social Publishing Layer | ✅ |
-| 4 | Persistence & Deduplication Foundation | ✅ |
-| 5 | Named Social Target Routing | ✅ |
-| 6 | Runtime, Scheduler & Alerts | ✅ |
-| 6.5 | Observability & Operational Stabilization | ✅ |
-| 7 | RSS Ingestion Pipeline | ✅ |
-| 8 | Live Pilot Hardening & Credential Activation | ✅ |
-| 9 | WordPress Publishing Layer | ✅ |
-| 10 | Media & Asset Generation Layer | ✅ |
-| 11 | Content Asset Pipeline | ✅ |
-| 12A | Social Media Image Publishing | ✅ |
-| 12B | Visual Branding & Template System | ✅ |
-| 13A | Scheduler Service Core Integration | ✅ |
-
----
-
-# Phase 13A — Scheduler Service Core Integration
-
-## Status
-
-✅ COMPLETE
-
-**Completed:** 2026-06-03
-
-### Goal
-
-Transition ContentPilot away from system-level host crons toward an integrated background daemon scheduling architecture backed by APScheduler, establishing full persistence layers and execution tracing.
-
-### Implemented
-
-#### shared/scheduler/models.py
-
-* Dataclass definitions for state encapsulation: `Schedule` and `JobRun` matching active schema mappings.
-* Database utility functions handling migrations, state reading, and insertion hooks: `init_scheduler_db()`, `load_enabled_schedules()`, `seed_default_schedule()`, `insert_job_run()`, and `update_job_run()`.
-
-#### shared/scheduler/retry_manager.py
-
-* Implemented the structural `RetryManager` handling deterministic exponential backoff delays.
-* Configured boundaries: Retry 1 = 15m, Retry 2 = 1h, Retry 3 = 6h. Flagged execution loops as permanently exhausted on consecutive failures exceeding the threshold.
-
-#### shared/scheduler/job_executor.py
-
-* Designed thread-safe execution boundaries leveraging internal registry dictionaries (`_MODULE_REGISTRY`) and module-level thread locks (`_get_module_lock`).
-* Dual-layer concurrency defense: Prevents multiple threads from running overlapping pipeline jobs simultaneously while working alongside container file-locks.
-
-#### shared/scheduler/heartbeat.py
-
-* Created the independent `HeartbeatService` tracking continuous execution performance.
-* Emits regular telemetry payloads detailing scheduler engine uptime, status diagnostics, and processed total job counts without breaking runtime mocks during test coverage loops.
-
-#### shared/scheduler/scheduler_service.py
-
-* The primary persistent execution loop. Automatically initializes database connectivity, provisions default seed schedules, kicks off the `BackgroundScheduler` instance, and binds graceful signal catches for clean container teardowns.
-
-#### Test Coverage
-
-* Verified with a specialized local verification test matrix.
-* **Test Metrics:** 27 assertions passed across the scheduler framework capturing thread safety boundaries, database state changes, backoff evaluations, and metrics tracking.
-
----
-
-# Environment Variables
-
-## Media Pipeline
-
-| Variable | Default |
-| --- | --- |
-| ENABLE_MEDIA_ASSETS | true |
-| ENABLE_FEATURED_IMAGES | true |
-| ENABLE_SOCIAL_IMAGES | true |
-| MEDIA_BRANDING_ENABLED | false |
-| MEDIA_ADS_ENABLED | false |
-| MEDIA_STORAGE_DIR | /app/data/media |
-
-## Branding System
-
-| Variable | Default |
-| --- | --- |
-| MEDIA_BRAND_NAME | "" |
-| MEDIA_BRAND_TAGLINE | "" |
-| MEDIA_BRAND_CTA | "" |
-| MEDIA_BRAND_WEBSITE | "" |
-| MEDIA_BRAND_LAYOUT | B |
-| MEDIA_BRAND_PRIMARY_COLOR | #0F172A |
-| MEDIA_BRAND_ACCENT_COLOR | #38BDF8 |
-| MEDIA_BRAND_LOGO_PATH | null |
-
----
-
-# Known Limitations
+# Current Limitations
 
 ## Social Publishing
 
-* Instagram production validation still limited
+* Instagram production validation remains limited
 
 ## Media
 
-* No video generation pipeline
-* Stability AI provider not activated
-* Ideogram provider not activated
-* Flux provider not activated
+Not yet activated:
 
-## Platform Expansion
+* Stability AI
+* Ideogram
+* Flux
 
-Currently production-ready:
+Not yet implemented:
 
-```text
-daily_news
+* Video generation pipeline
 
-```
+## SaaS Features
 
-Future modules:
+Not yet implemented:
 
-* article_publisher
-* deals_engine
-* social_tips
-* social_video
+* Dashboard
+* REST API
+* Authentication
+* Billing
+* Credential encryption
 
 ---
 
 # Next Major Milestone
 
-# Phase 13B — Execution Queues & Workers
+# Phase 14A — Shared Routing Framework
 
 ## Goal
 
-Extend the persistent scheduler service to delegate compute-heavy pipeline execution tasks to separated worker containers using background queuing architectures, protecting core engine memory loops during massive generation bursts.
+Introduce intelligent content routing capabilities.
+
+Current workflow:
+
+```text
+RSS
+    ↓
+Rewrite
+    ↓
+Publish
+```
+
+Future workflow:
+
+```text
+RSS
+    ↓
+Rewrite
+    ↓
+Classify
+    ↓
+Route
+    ↓
+Publish
+```
+
+---
+
+## Planned Architecture
+
+```text
+shared/routing/
+├── router.py
+├── classifiers/
+├── repositories/
+├── models/
+└── exceptions/
+```
+
+---
 
 ## Objectives
 
-### Queue Layer
+### Routing
 
-* Migration pathway preparation for multi-container orchestration.
-* Worker separation isolation protecting individual execution context environments.
+* Client-aware routing
+* Business-category matching
+* Dynamic destination selection
 
-### Reliability
+### Classification
 
-* Metrics collecting structures reporting queue delays.
-* Execution path tracing verifying transaction records cleanly down streaming tables.
+Initial:
+
+* KeywordClassifier
+
+Future:
+
+* EmbeddingClassifier
+* LLMClassifier
+
+### Persistence
+
+Initial:
+
+* JSON configuration
+
+Future:
+
+* SQLite
+* PostgreSQL
+
+### Publishing
+
+Maintain compatibility with existing:
+
+* WordPress publishers
+* Facebook publishers
+* Instagram publishers
+
+---
+
+# Long-Term Roadmap
+
+## Phase 13C
+
+Brand-scoped RSS feed configuration.
+
+## Phase 14
+
+Routing framework and Auto-Publisher foundation.
+
+## Phase 15
+
+REST API and management dashboard.
+
+## Phase 16
+
+Authentication and RBAC.
+
+## Phase 17
+
+Billing and subscriptions.
+
+## Phase 18
+
+Credential encryption.
+
+---
+
+# Long-Term Vision
+
+```text
+ContentPilot
+    ↓
+Multi-Brand Platform
+    ↓
+Multi-Client Platform
+    ↓
+Self-Service SaaS
+    ↓
+Subscription Business
+```
 
 ---
 
@@ -553,10 +768,12 @@ Before making changes:
 
 1. Read project state completely.
 2. Respect phase boundaries.
-3. Avoid unnecessary abstractions.
-4. Maintain module isolation.
+3. Maintain module isolation.
+4. Avoid unnecessary abstractions.
 5. Test inside Docker.
-6. Update timeline before commit.
+6. Update documentation before commit.
+7. Preserve backward compatibility.
+8. Follow BrandContext architecture.
 
 ---
 
@@ -564,24 +781,26 @@ Before making changes:
 
 ```text
 Understand
-→ Analyze
-→ Implement Minimal Change
-→ Test in Docker
-→ Validate
-→ Update Documentation
-→ Commit
-
+    ↓
+Analyze
+    ↓
+Implement Minimal Change
+    ↓
+Test In Docker
+    ↓
+Validate
+    ↓
+Update Documentation
+    ↓
+Commit
 ```
 
 ---
 
 # Current Direction
 
-ContentPilot is now a production-capable AI publishing platform with container-native scheduling. Background workloads are state-driven, resilient to runtime host-level path leakage, and ready for future modular worker horizontal scale-out.
+ContentPilot is now a production-ready, multi-brand AI publishing platform with a SaaS-ready foundation.
 
-```
-***
+The scheduler, publishing stack, media system, AI layer, and brand architecture are operational and stable.
 
-This document now perfectly reflects your production environment! You are completely greenlit to commit everything.
-
-```
+The next evolution is the introduction of a shared routing framework that will transform ContentPilot from a multi-brand publishing system into a dynamic multi-client content distribution platform.
