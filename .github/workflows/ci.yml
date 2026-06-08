@@ -36,6 +36,7 @@ jobs:
           PYTHONPATH=. python3 scripts/test_runtime_lock.py
           PYTHONPATH=. python3 scripts/test_runtime_metadata.py
           PYTHONPATH=. python3 scripts/test_runtime_failure.py
+          PYTHONPATH=. python3 scripts/test_logging_format.py
           PYTHONPATH=. python3 scripts/test_facebook_mock.py
           PYTHONPATH=. python3 scripts/test_publish_pipeline.py
           PYTHONPATH=. python3 scripts/test_duplicate_detection.py

@@ -26,8 +26,12 @@ _BACKUP_COUNT = 5
 
 
 class StructuredFormatter(logging.Formatter):
+    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
+        timestamp = datetime.fromtimestamp(record.created, timezone.utc)
+        return timestamp.strftime(datefmt or "%Y-%m-%dT%H:%M:%SZ")
+
     def format(self, record: logging.LogRecord) -> str:
-        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        ts = self.formatTime(record, "%Y-%m-%dT%H:%M:%SZ")
         level = record.levelname
         name = record.name
         msg = record.getMessage()
@@ -59,7 +63,8 @@ def configure_logging(
     level: str | None = None,
 ) -> None:
     if logging.root.handlers:
-        return
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
 
     log_level = getattr(
         logging,
