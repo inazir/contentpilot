@@ -41,3 +41,16 @@ skills-lock.json
 .clineignore
 .clinerules.md
 data/media/composed/*.jpg
+
+# Additional frontend and build artifacts
+frontend/dist/
+frontend/wordpress/dist/
+frontend/mietvertrag/dist/
+
+# Database and runtime files
+*.db
+*.db.gz
+data/runtime/
+
+# Lock files (if needed)
+data/locks/

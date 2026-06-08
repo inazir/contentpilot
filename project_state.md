@@ -824,6 +824,31 @@ Maintain compatibility with existing:
 
 Brand-scoped RSS feed configuration.
 
+## Between phase:
+## Phase 13+ : Frontend Edition — Monorepo + Git-Driven Deployment (09.06.2026 )
+
+**Status:** Complete ✅
+
+### What changed
+- Merged `mycontentpilot-site` repo into `contentpilot` monorepo
+- New layout: `backend/` (modules, shared), `frontend/` (wordpress, mietvertrag), `deploy/` (all ops)
+- `deploy/sites.yml` is now the single file to edit when adding a new subdomain
+
+### Deployment pipeline
+- GitHub webhook → VPS :9000 → `deploy.sh` → nginx-sync + docker compose up
+- SSL auto-issued via `ssl-issue.sh` on first deploy of a new domain
+- Systemd service `contentpilot-webhook` runs the listener (enabled, auto-restart)
+
+### To add a new subdomain going forward
+1. Add entry to `deploy/sites.yml`
+2. Add compose file to `deploy/compose/` if new service
+3. `git push` — everything else is automatic
+
+### Manual infrastructure (one-time, already done)
+- `contentpilot-webhook.service` installed and enabled on VPS
+- Port 9000 opened in UFW
+- GitHub webhook configured pointing to VPS :9000
+
 ## Phase 14
 
 Routing framework and Auto-Publisher foundation.

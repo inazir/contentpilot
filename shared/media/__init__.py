@@ -35,8 +35,7 @@ from .social_formatter import format_for_social
 from . import image_processing
 
 # Phase 10B
-from .image_composition import compose_image
-from .featured_image import get_featured_image
+# Phase 10B exports are intentionally omitted in Phase 10A.
 
 __all__ = [
     # 10A
@@ -44,7 +43,4 @@ __all__ = [
     "search_stock_image",
     "format_for_social",
     "image_processing",
-    # 10B
-    "compose_image",
-    "get_featured_image",
 ]

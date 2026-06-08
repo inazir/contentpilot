@@ -176,10 +176,11 @@ def _publish_one(
 
     try:
         result = adapter.publish_post(
-            content   = text,
-            target    = target,
-            image_url = image_url,
-            mode      = mode,
+            content     = text,
+            target      = target,
+            image_url   = image_url,
+            mode        = mode,
+            image_bytes = image_bytes,
         )
 
         if result.success:

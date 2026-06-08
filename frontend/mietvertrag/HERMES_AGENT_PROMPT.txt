@@ -1,0 +1,317 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║          HERMES AGENT – FULL DEPLOYMENT INSTRUCTIONS                ║
+║          Project: Mietvertrag Generator                             ║
+║          Target:  mietvertrag.mycontentpilot.de                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+You are Hermes, my personal AI agent running on my VPS.
+I am sending you a ZIP file containing a complete React web application.
+Your job is to deploy it as a Docker container behind Nginx with SSL.
+
+Read ALL steps before starting. Do them in order.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHAT'S IN THE ZIP
+─────────────────
+mietvertrag-deploy/
+├── src/
+│   ├── App.jsx          ← Main React application
+│   └── main.jsx         ← React entry point
+├── public/
+│   └── favicon.svg
+├── nginx/
+│   ├── docker-internal.conf              ← Nginx config inside Docker
+│   └── mietvertrag.mycontentpilot.de.conf  ← Host Nginx config (SSL)
+├── index.html           ← Vite HTML entry
+├── package.json         ← Node dependencies
+├── vite.config.js       ← Vite build config
+├── Dockerfile           ← 2-stage Docker build
+└── docker-compose.yml   ← Docker Compose service definition
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PREREQUISITES (verify before starting)
+───────────────────────────────────────
+Run these checks on the VPS and confirm all pass:
+
+  docker --version          # Must be installed
+  docker compose version    # Must be v2+
+  nginx -v                  # Must be installed on host
+  certbot --version         # Must be installed
+  curl ifconfig.me          # Note the public IP
+
+If any tool is missing, install it first:
+  sudo apt update
+  sudo apt install -y nginx certbot python3-certbot-nginx
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1 — UPLOAD AND EXTRACT THE ZIP
+─────────────────────────────────────
+Upload the ZIP to the VPS (you can use scp, sftp, or Telegram file):
+
+  scp mietvertrag-deploy.zip user@YOUR_VPS_IP:/opt/apps/
+
+SSH into the VPS and extract:
+
+  sudo mkdir -p /opt/apps/mietvertrag
+  sudo unzip /opt/apps/mietvertrag-deploy.zip -d /opt/apps/
+  # The folder will be: /opt/apps/mietvertrag-deploy/
+  # Rename it cleanly:
+  sudo mv /opt/apps/mietvertrag-deploy /opt/apps/mietvertrag
+
+Verify structure:
+  ls /opt/apps/mietvertrag/
+  # Should show: src/ nginx/ public/ Dockerfile docker-compose.yml etc.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 2 — DNS RECORD
+─────────────────────
+In the DNS control panel for mycontentpilot.de, add:
+
+  Type:   A
+  Name:   mietvertrag
+  Value:  YOUR_VPS_PUBLIC_IP
+  TTL:    300
+
+Wait ~2 minutes, then verify:
+  dig mietvertrag.mycontentpilot.de +short
+  # Should return your VPS IP
+
+Do NOT continue until DNS resolves correctly.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 3 — BUILD AND START DOCKER CONTAINER
+──────────────────────────────────────────
+  cd /opt/apps/mietvertrag
+  sudo docker compose up -d --build
+
+This will:
+  1. Pull node:20-alpine
+  2. Install npm dependencies inside container
+  3. Run: npm run build (Vite compiles React → /dist)
+  4. Pull nginx:alpine
+  5. Copy /dist into Nginx container
+  6. Start container on port 3010
+
+Build takes ~60-90 seconds on first run.
+
+Verify the container is running:
+  sudo docker ps
+  # Should show: mietvertrag   Up X seconds   0.0.0.0:3010->3010/tcp
+
+Test it locally:
+  curl -s http://localhost:3010 | head -5
+  # Should return HTML starting with <!doctype html>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 4 — TEMPORARY HTTP NGINX CONFIG (for Certbot)
+────────────────────────────────────────────────────
+Before SSL, set up a plain HTTP proxy so Certbot can verify the domain.
+
+  sudo nano /etc/nginx/sites-available/mietvertrag.mycontentpilot.de
+
+Paste this exact content:
+
+──────────────────────────────────────────
+server {
+    listen 80;
+    server_name mietvertrag.mycontentpilot.de;
+
+    location / {
+        proxy_pass http://localhost:3010;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+──────────────────────────────────────────
+
+Enable it and reload:
+  sudo ln -s /etc/nginx/sites-available/mietvertrag.mycontentpilot.de \
+             /etc/nginx/sites-enabled/
+  sudo nginx -t
+  sudo nginx -s reload
+
+Verify in browser: http://mietvertrag.mycontentpilot.de
+(Should load the Mietvertrag Generator app over HTTP)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 5 — ISSUE SSL CERTIFICATE
+────────────────────────────────
+  sudo certbot --nginx \
+    -d mietvertrag.mycontentpilot.de \
+    --non-interactive \
+    --agree-tos \
+    -m YOUR_EMAIL@example.com
+
+Replace YOUR_EMAIL@example.com with the real admin email.
+
+Certbot will:
+  - Verify domain ownership via HTTP
+  - Issue a free Let's Encrypt certificate
+  - Auto-edit the Nginx config to add HTTPS
+
+After success, verify:
+  curl -I https://mietvertrag.mycontentpilot.de
+  # Should return HTTP/2 200
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 6 — REPLACE WITH FULL NGINX CONFIG
+─────────────────────────────────────────
+Now replace the basic config with the production-ready version
+that includes security headers, gzip, and cache headers:
+
+  sudo cp /opt/apps/mietvertrag/nginx/mietvertrag.mycontentpilot.de.conf \
+          /etc/nginx/sites-available/mietvertrag.mycontentpilot.de
+
+IMPORTANT: The SSL certificate paths in this file are:
+  /etc/letsencrypt/live/mietvertrag.mycontentpilot.de/fullchain.pem
+  /etc/letsencrypt/live/mietvertrag.mycontentpilot.de/privkey.pem
+
+Certbot should have created these. Verify they exist:
+  ls /etc/letsencrypt/live/mietvertrag.mycontentpilot.de/
+
+The file also needs proxy_pass. Edit it to add the proxy block.
+Find the location / block and make it read:
+
+  location / {
+      proxy_pass http://localhost:3010;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+Test and reload:
+  sudo nginx -t && sudo nginx -s reload
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 7 — FINAL VERIFICATION
+─────────────────────────────
+Run all of these checks:
+
+  1. HTTPS works:
+     curl -I https://mietvertrag.mycontentpilot.de
+     → Expect: HTTP/2 200
+
+  2. HTTP redirects to HTTPS:
+     curl -I http://mietvertrag.mycontentpilot.de
+     → Expect: 301 redirect to https://
+
+  3. Container is healthy:
+     sudo docker ps | grep mietvertrag
+     → Expect: Up X hours
+
+  4. Logs look clean:
+     sudo docker logs mietvertrag --tail=20
+
+  5. SSL grade (optional, browser):
+     https://www.ssllabs.com/ssltest/analyze.html?d=mietvertrag.mycontentpilot.de
+
+Open in browser: https://mietvertrag.mycontentpilot.de
+The full Mietvertrag Generator form should load. ✓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+AUTO-RENEWAL OF SSL (set and forget)
+──────────────────────────────────────
+Certbot installs a cron job automatically. Verify it:
+  sudo systemctl status certbot.timer
+  # Should show: active (waiting)
+
+If not active:
+  sudo systemctl enable certbot.timer
+  sudo systemctl start certbot.timer
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FUTURE UPDATES (when code changes)
+────────────────────────────────────
+Upload new zip, extract to same folder, then:
+
+  cd /opt/apps/mietvertrag
+  sudo docker compose down
+  sudo docker compose up -d --build
+
+Total downtime: ~5 seconds.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OPTIONAL — ALSO SERVE FROM germanysupport.de SUBDOMAIN
+────────────────────────────────────────────────────────
+In GermanySupport.de DNS panel, add:
+
+  Type:   CNAME
+  Name:   mietvertrag
+  Value:  mietvertrag.mycontentpilot.de.
+  TTL:    300
+
+Then on the VPS, add the second domain to Nginx server_name:
+  server_name mietvertrag.mycontentpilot.de mietvertrag.germanysupport.de;
+
+Re-run Certbot to cover both domains:
+  sudo certbot --nginx \
+    -d mietvertrag.mycontentpilot.de \
+    -d mietvertrag.germanysupport.de
+
+Reload Nginx:
+  sudo nginx -s reload
+
+Both subdomains now serve the same app. Zero extra server needed. ✓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ARCHITECTURE SUMMARY
+─────────────────────
+  Internet
+    │
+    ▼
+  mietvertrag.mycontentpilot.de  ← DNS A record → VPS IP
+    │
+    ▼
+  Host Nginx (port 443, SSL/TLS termination)
+    │  proxy_pass
+    ▼
+  Docker: nginx:alpine (port 3010)
+    │
+    ▼
+  /usr/share/nginx/html/  ← Vite static build (index.html + JS + CSS)
+
+- No Node.js at runtime
+- No database
+- Fully stateless
+- ~10MB RAM usage
+- Near-zero CPU at idle
+- Container restarts automatically on VPS reboot (restart: unless-stopped)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TROUBLESHOOTING
+────────────────
+Container won't start:
+  sudo docker logs mietvertrag
+
+Nginx 502 Bad Gateway:
+  → Container not running. Run: sudo docker compose up -d
+
+Port 3010 conflict:
+  → Edit docker-compose.yml, change "3010:3010" to "3011:3010"
+  → Update proxy_pass in Nginx to http://localhost:3011
+
+Certbot fails (DNS not resolving):
+  → Wait longer for DNS propagation
+  → Check: dig mietvertrag.mycontentpilot.de +short
+
+Permission denied on /opt/apps:
+  → sudo chown -R $USER:$USER /opt/apps
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+END OF HERMES AGENT INSTRUCTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

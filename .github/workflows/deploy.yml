@@ -1,0 +1,35 @@
+name: CI/Lint
+# This workflow is OPTIONAL and primarily for future CI/CD enhancements.
+# The primary deployment trigger is the VPS-side webhook server that listens on port 9000.
+# The webhook validates GitHub push events and runs deploy.sh on the VPS automatically.
+# This file serves as a placeholder for future linting, testing, and validation steps.
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check YAML syntax
+        run: |
+          python3 -c "import yaml; yaml.safe_load(open('deploy/sites.yml'))"
+          echo "✓ sites.yml valid YAML"
+
+      - name: Validate shell scripts
+        run: |
+          for script in deploy/scripts/*.sh; do
+            if [[ -f "$script" ]]; then
+              bash -n "$script" && echo "✓ $(basename $script) syntax OK"
+            fi
+          done
+
+      # Future steps could include:
+      # - Run Python linting (pylint, black, flake8)
+      # - Run Docker build validation
+      # - Run tests for backend modules
+      # - Validate docker-compose files

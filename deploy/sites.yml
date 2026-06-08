@@ -1,0 +1,9 @@
+sites:
+  - host: mycontentpilot.de
+    port: 8080
+    compose: docker-compose.yml
+    service: wordpress
+  - host: mietvertrag.mycontentpilot.de
+    port: 3010
+    compose: docker-compose.mietvertrag.yml
+    service: mietvertrag

@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  mietvertrag:
+    build:
+      context: ../../frontend/mietvertrag
+      dockerfile: Dockerfile
+    container_name: mietvertrag
+    restart: unless-stopped
+    ports:
+      - "3010:3010"
+    env_file: ../../.env
+    # No volumes needed – it's a static build baked into the image
+
+# To deploy:
+#   docker compose -f deploy/compose/docker-compose.mietvertrag.yml up -d --build
+#
+# To update after code changes:
+#   docker compose -f deploy/compose/docker-compose.mietvertrag.yml down && \
+#   docker compose -f deploy/compose/docker-compose.mietvertrag.yml up -d --build
+#
+# Host Nginx proxies mietvertrag.mycontentpilot.de → localhost:3010
