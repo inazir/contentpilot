@@ -446,7 +446,7 @@ function mcp_translations_json(): string {
             'platform_stable'   => 'Aktiv & Stabil',
             'platform_ready'    => 'Produktionsbereit',
             'waitlist_title'    => 'Early Access',
-            'waitlist_sub'      => 'Bereits <strong>Viele Unternehmen</strong> haben ihr Interesse bekundet.',
+            'waitlist_sub'      => 'Bereits <strong>viele Unternehmen</strong> haben ihr Interesse bekundet.',
             'waitlist_sub2'     => 'Sichern Sie sich Ihren Platz auf der Warteliste und erhalten Sie frühzeitigen Zugang.',
             'pricing_title'     => 'Preise',
             'pricing_sub'       => 'Transparent. Skalierbar. Für jede Unternehmensgröße.',
@@ -613,7 +613,7 @@ function mcp_translations_json(): string {
             'platform_stable'   => 'Active & Stable',
             'platform_ready'    => 'Production Ready',
             'waitlist_title'    => 'Early Access',
-            'waitlist_sub'      => 'Already <strong>Many businesses</strong> have registered their interest.',
+            'waitlist_sub'      => 'Already <strong>many businesses</strong> have shown their interest.',
             'waitlist_sub2'     => 'Secure your spot on the waitlist and get early access.',
             'pricing_title'     => 'Pricing',
             'pricing_sub'       => 'Transparent. Scalable. For every business size.',
@@ -818,7 +818,7 @@ function render_hero() { ?>
             <div class="card p-8 glow-blue">
                 <div class="text-center mb-6">
                     <h2 class="text-xl font-bold mb-1" data-i18n="waitlist_title">Früher Zugang</h2>
-                    <p class="text-slate-400 text-sm" data-i18n-html="waitlist_sub">Bereits <strong>Viele Unternehmen</strong> haben Interesse registriert.</p>
+                    <p class="text-slate-400 text-sm" data-i18n-html="waitlist_sub">Bereits <strong>viele Unternehmen</strong> haben Interesse registriert.</p>
                 </div>
                 <?php
                 if (class_exists('FluentForm\App\Modules\Form\Form')) {
