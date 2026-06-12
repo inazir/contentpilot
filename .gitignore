@@ -54,3 +54,7 @@ data/runtime/
 
 # Lock files (if needed)
 data/locks/
+
+# Mietvertrag fronend npm files
+frontend/mietvertrag/node_modules
+frontend/mietvertrag/dist/

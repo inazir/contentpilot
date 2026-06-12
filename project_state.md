@@ -151,6 +151,54 @@ Publishing
 ```
 
 ---
+## Phase: Mietvertrag Generator v2.0 Refactor
+**Status:** Complete
+**Date:** June 2026
+
+### Summary
+Full architecture refactor of the Mietvertrag Generator
+(`frontend/mietvertrag/`). The existing 659-line single-file monolith
+was replaced with a 63-file schema-driven, wizard-based application.
+
+### Architecture
+- **Config layer:** `src/config/siteConfig.js` — all URLs/branding
+  from VITE_ env vars with fallbacks
+- **Schema system:** 8 schemas (`src/schemas/`) define visible sections,
+  required fields, default rules, clauses, and available document types
+  per contract category
+- **State management:** `useContract` hook owns all form state;
+  `useDraft` + `storageService` handle localStorage persistence
+- **Services:** `contractGenerator.js` produces structured document
+  models; `pdfGenerator.js` renders them to PDF via jsPDF
+- **UI:** 11 wizard steps, shared component library (11 common
+  components), global CSS design system with dark mode
+
+### Contract Types Supported (14)
+WG möbliert/unmöbliert, Wohnung möbliert/unmöbliert, Haus, Garage,
+Stellplatz, Kellerraum, Lagerraum, Büro, Gewerberaum, Zwischenmiete,
+Untervermietung, Studentenwohnheim
+
+### Documents Generated (up to 8 per contract type)
+Mietvertrag, Übergabeprotokoll, Schlüsselprotokoll, Inventarliste,
+Hausordnung, Wohnungsgeberbestätigung, Kündigungsformular,
+Mietbescheinigung
+
+### New Dependency
+- `jspdf ^2.5.1`
+
+### Environment Variables Added
+`VITE_CONTENTPILOT_URL`, `VITE_CONTENTPILOT_NAME`,
+`VITE_PRODUCT_NAME`, `VITE_PRODUCT_DOMAIN`,
+`VITE_IMPRESSUM_URL`, `VITE_DATENSCHUTZ_URL`,
+`VITE_AGB_URL`, `VITE_CONTACT_URL`, `VITE_SUPPORT_EMAIL`
+
+### Key Decisions
+- No English language support (contracts are German legal documents)
+- No client-side router added (wizard uses step state, not URL routes)
+- jsPDF chosen over html2canvas for PDF (no DOM dependency,
+  smaller bundle, precise layout control)
+- Schema `visibleSections` array drives which wizard steps appear,
+  making new contract types addable with a single schema file
 
 # Multi-Brand SaaS Foundation (Phase 13B)
 

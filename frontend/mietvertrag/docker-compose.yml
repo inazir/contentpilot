@@ -1,18 +1,28 @@
-version: "3.9"
-
 services:
   mietvertrag:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Vite bakes env vars at BUILD time — pass them as build args.
+      # They are forwarded to the Vite build via ARG → ENV in the Dockerfile.
+      args:
+        VITE_CONTENTPILOT_URL:  ${VITE_CONTENTPILOT_URL:-https://mycontentpilot.de}
+        VITE_CONTENTPILOT_NAME: ${VITE_CONTENTPILOT_NAME:-ContentPilot}
+        VITE_PRODUCT_NAME:      ${VITE_PRODUCT_NAME:-Mietvertrag Generator}
+        VITE_PRODUCT_DOMAIN:    ${VITE_PRODUCT_DOMAIN:-mietvertrag.mycontentpilot.de}
+        VITE_IMPRESSUM_URL:     ${VITE_IMPRESSUM_URL:-https://mycontentpilot.de/impressum}
+        VITE_DATENSCHUTZ_URL:   ${VITE_DATENSCHUTZ_URL:-https://mycontentpilot.de/datenschutz}
+        VITE_AGB_URL:           ${VITE_AGB_URL:-https://mycontentpilot.de/agb}
+        VITE_CONTACT_URL:       ${VITE_CONTACT_URL:-https://mycontentpilot.de/kontakt}
+        VITE_SUPPORT_EMAIL:     ${VITE_SUPPORT_EMAIL:-}
+    image: mietvertrag-generator:latest
     container_name: mietvertrag
     restart: unless-stopped
     ports:
-      - "3010:3010"
-    # No volumes needed – it's a static build baked into the image
+      - "127.0.0.1:3010:80"
+    networks:
+      - contentpilot
 
-# To deploy:
-#   docker compose up -d --build
-#
-# To update after code changes:
-#   docker compose down && docker compose up -d --build
-#
-# Host Nginx proxies mietvertrag.mycontentpilot.de → localhost:3010
+networks:
+  contentpilot:
+    external: true
