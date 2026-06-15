@@ -1,0 +1,11 @@
+{
+    email iqbalnazirsumon@gmail.com
+}
+
+mycontentpilot.de {
+    reverse_proxy 127.0.0.1:8080
+}
+
+mietvertrag.mycontentpilot.de {
+    reverse_proxy 127.0.0.1:3010
+}

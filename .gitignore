@@ -37,8 +37,6 @@ data/media/*
 .agents/
 skills-lock.json
 .clineignore
-.gitignore
-.clineignore
 .clinerules.md
 data/media/composed/*.jpg
 
@@ -55,6 +53,22 @@ data/runtime/
 # Lock files (if needed)
 data/locks/
 
-# Mietvertrag fronend npm files
+# Mietvertrag frontend npm files
 frontend/mietvertrag/node_modules
 frontend/mietvertrag/dist/
+
+# ============================================================
+# Core Project Fixes (Matching actual repository layout)
+# ============================================================
+
+# Ignore the entire WordPress plugins directory entirely 
+frontend/wordpress/wp-content/plugins/
+
+# Ignore zip bundles inside your custom theme
+frontend/wordpress/wp-content/themes/mycontentpilot-theme/*.zip
+
+# System & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

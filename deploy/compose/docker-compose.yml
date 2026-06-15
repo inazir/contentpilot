@@ -1,4 +1,5 @@
 services:
+  # --- BACKEND AUTOMATION ENGINE ---
   daily_news:
     build:
       context: ../..
@@ -7,8 +8,9 @@ services:
     volumes:
       - ../../data:/app/data
     restart: "no"
-    # Run container as host user to prevent root-owned files in mounted volumes
     user: "${DOCKER_UID}:${DOCKER_GID}"
+    networks:
+      - cp_isolated_network
 
   scheduler:
     build:
@@ -19,8 +21,63 @@ services:
       - ../../data:/app/data
       - ../../shared:/app/shared
     restart: unless-stopped
-    # Run container as host user to prevent root-owned files in mounted volumes
     user: "${DOCKER_UID}:${DOCKER_GID}"
     command: python3 -m shared.scheduler.scheduler_service
-  
-  
+    networks:
+      - cp_isolated_network
+
+  # --- FRONTEND CMS LAYERS ---
+  db:
+    image: mysql:8.0
+    container_name: contentpilot_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: cp_secure_root_pass_2026
+      MYSQL_DATABASE: mycontentpilot_production_db
+      MYSQL_USER: mycontentpilot_wp_admin
+      MYSQL_PASSWORD: cp_wp_secure_password
+    volumes:
+      - mycontentpilot_isolated_mysql_data:/var/lib/mysql
+    networks:
+      - cp_isolated_network
+
+  wordpress:
+    image: wordpress:latest
+    container_name: contentpilot_wp
+    restart: always
+    ports:
+      - "8080:80" # Map to host port so Caddy can reach it via localhost
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: mycontentpilot_wp_admin
+      WORDPRESS_DB_PASSWORD: cp_wp_secure_password
+      WORDPRESS_DB_NAME: mycontentpilot_production_db
+    volumes:
+      - ../../frontend/wordpress/wp-content/themes/mycontentpilot-theme:/var/www/html/wp-content/themes/mycontentpilot-theme
+      - ../../frontend/wordpress/wp-content/plugins:/var/www/html/wp-content/plugins
+    networks:
+      - cp_isolated_network
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: contentpilot_ssl_proxy
+    restart: always
+    network_mode: host # Sits directly on host network to bypass bridge firewall boundaries
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - mycontentpilot_caddy_data:/data
+      - mycontentpilot_caddy_config:/config
+    depends_on:
+      - wordpress
+
+volumes:
+  mycontentpilot_isolated_mysql_data:
+    name: mycontentpilot-site_mycontentpilot_isolated_mysql_data
+  mycontentpilot_caddy_data:
+  mycontentpilot_caddy_config:
+
+networks:
+  cp_isolated_network:
+    driver: bridge
