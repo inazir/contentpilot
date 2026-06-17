@@ -186,19 +186,16 @@ get_header(); ?>
 
         <!-- WhatsApp -->
         <div class="contact-info-card">
-          <div class="contact-info-card__icon" aria-hidden="true">💬</div>
+          <div class="contact-info-card__icon" aria-hidden="true" style="color: var(--c-mint);">💬</div>
           <div>
             <h3>WhatsApp</h3>
             <p>Für schnelle Fragen direkt per WhatsApp erreichbar.</p>
-            <a
-              href="https://wa.me/4915254113795"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn btn--ghost-dark"
-              style="margin-top:var(--s-3);display:inline-flex;"
-            >
-              Auf WhatsApp schreiben
+            
+            <a href="https://wa.me/4915254113795" target="_blank" rel="noopener noreferrer"
+              style="color:var(--c-mint); font-size:var(--t-sm); display:inline-block; margin-top:var(--s-2);">
+              💬 Auf WhatsApp schreiben
             </a>
+
           </div>
         </div>
 

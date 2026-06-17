@@ -46,11 +46,6 @@
           </a>
         </div>
 
-        <!-- WhatsApp pill -->
-        <a href="https://wa.me/4915254113795" target="_blank" rel="noopener noreferrer" class="footer-whatsapp">
-          Auf WhatsApp schreiben
-        </a>
-
         <!-- Newsletter -->
         <div class="footer-newsletter">
           <p>Updates & neue Plattformen — kein Spam.</p>
@@ -103,7 +98,7 @@
           <li>
             <a href="https://wa.me/4915254113795" target="_blank" rel="noopener noreferrer"
                style="color:var(--c-mint); font-size:var(--t-sm);">
-              💬 WhatsApp
+              💬 Auf WhatsApp schreiben
             </a>
           </li>
         </ul>
