@@ -333,37 +333,16 @@ get_header(); ?>
 
       <div class="platform-card platform-card--live">
         <div class="platform-card__status"><span class="badge badge--live">Live</span></div>
-        <div class="platform-card__icon" aria-hidden="true">🌐</div>
-        <h3 class="platform-card__name">WordPress</h3>
-        <p class="platform-card__desc">Artikel, Kategorien, Tags — direkt in Ihre WordPress-Installation.</p>
-      </div>
-
-      <div class="platform-card platform-card--soon">
-        <div class="platform-card__status"><span class="badge badge--soon">Demnächst</span></div>
-        <div class="platform-card__icon" aria-hidden="true">💼</div>
+        <div class="platform-card__icon" aria-hidden="true">📸</div>
         <h3 class="platform-card__name">LinkedIn</h3>
         <p class="platform-card__desc">Professioneller Content für Ihr Unternehmensprofil und Ihre Seite.</p>
       </div>
 
-      <div class="platform-card platform-card--soon">
-        <div class="platform-card__status"><span class="badge badge--soon">Demnächst</span></div>
-        <div class="platform-card__icon" aria-hidden="true">🎵</div>
-        <h3 class="platform-card__name">TikTok</h3>
-        <p class="platform-card__desc">Video-Skripte und Metadaten für Ihre TikTok-Präsenz.</p>
-      </div>
-
-      <div class="platform-card platform-card--soon">
-        <div class="platform-card__status"><span class="badge badge--soon">Demnächst</span></div>
-        <div class="platform-card__icon" aria-hidden="true">▶️</div>
-        <h3 class="platform-card__name">YouTube</h3>
-        <p class="platform-card__desc">Automatische Uploads mit Titel, Beschreibung und Tags.</p>
-      </div>
-
-      <div class="platform-card platform-card--soon">
-        <div class="platform-card__status"><span class="badge badge--soon">Demnächst</span></div>
-        <div class="platform-card__icon" aria-hidden="true">🔷</div>
-        <h3 class="platform-card__name">Xing</h3>
-        <p class="platform-card__desc">Business-Content für den deutschen Markt auf Xing.</p>
+      <div class="platform-card platform-card--live">
+        <div class="platform-card__status"><span class="badge badge--live">Live</span></div>
+        <div class="platform-card__icon" aria-hidden="true">🌐</div>
+        <h3 class="platform-card__name">WordPress</h3>
+        <p class="platform-card__desc">Artikel, Kategorien, Tags — direkt in Ihre WordPress-Installation.</p>
       </div>
 
       <div class="platform-card platform-card--request">

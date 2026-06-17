@@ -43,9 +43,8 @@ get_header(); ?>
       <span style="font-size:var(--t-xs);color:var(--c-text-muted-dark);margin-right:var(--s-1);">Verfügbar für:</span>
       <span class="badge badge--live">Facebook</span>
       <span class="badge badge--live">Instagram</span>
+      <span class="badge badge--live">LinkedIn</span>
       <span class="badge badge--live">WordPress</span>
-      <span class="badge badge--soon">LinkedIn</span>
-      <span class="badge badge--soon">TikTok</span>
       <span style="font-size:var(--t-xs);color:var(--c-text-muted-dark);">+ weitere demnächst</span>
     </div>
 
@@ -279,19 +278,6 @@ get_header(); ?>
       </div>
     </div>
 
-    <!-- Coming soon platforms -->
-    <div style="text-align:center;margin-bottom:var(--s-8);">
-      <p style="font-size:var(--t-xs);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--c-text-muted);margin-bottom:var(--s-4);">
-        Demnächst
-      </p>
-      <div style="display:flex;align-items:center;justify-content:center;gap:var(--s-3);flex-wrap:wrap;">
-        <div class="platform-pill platform-pill--soon">LinkedIn</div>
-        <div class="platform-pill platform-pill--soon">TikTok</div>
-        <div class="platform-pill platform-pill--soon">YouTube</div>
-        <div class="platform-pill platform-pill--soon">Xing</div>
-      </div>
-    </div>
-
     <p style="text-align:center;font-size:var(--t-sm);color:var(--c-text-secondary);">
       Weitere Plattformen auf Anfrage verfügbar. &nbsp;
       <a href="<?php echo esc_url( home_url('/kontakt') ); ?>" style="color:var(--c-indigo);font-weight:600;">Anfrage stellen →</a>
@@ -486,7 +472,7 @@ get_header(); ?>
           <span class="faq__icon" aria-hidden="true"></span>
         </label>
         <div class="faq__answer">
-          <p>Aktuell Facebook, Instagram und WordPress. LinkedIn, TikTok, YouTube und Xing folgen demnächst. Weitere Plattformen sind auf Anfrage möglich.</p>
+          <p>Aktuell Facebook, Instagram, LinkedIn und WordPress. Weitere Plattformen sind auf Anfrage möglich.</p>
         </div>
       </div>
 
