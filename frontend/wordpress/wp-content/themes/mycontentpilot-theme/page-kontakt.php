@@ -202,20 +202,6 @@ get_header(); ?>
           </div>
         </div>
 
-        <!-- Address -->
-        <div class="contact-info-card">
-          <div class="contact-info-card__icon" aria-hidden="true">📍</div>
-          <div>
-            <h3>Adresse</h3>
-            <address style="font-style:normal;font-size:var(--t-sm);color:var(--c-text-secondary);line-height:1.8;">
-              Iqbal Nazir<br>
-              Anemonenstr. 5/1<br>
-              70771 Leinfelden-Echterdingen<br>
-              Deutschland
-            </address>
-          </div>
-        </div>
-
       </div><!-- /.contact-info-col -->
 
     </div><!-- /.contact-layout -->

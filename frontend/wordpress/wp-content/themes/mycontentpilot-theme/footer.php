@@ -100,12 +100,6 @@
               info [at] mycontentpilot.de
             </a>
           </li>
-          <li style="color:var(--c-text-muted-dark); font-size:var(--t-sm); line-height:1.6;">
-            Iqbal Nazir<br>
-            Anemonenstr. 5/1<br>
-            70771 Leinfelden-Echterdingen<br>
-            Deutschland
-          </li>
           <li>
             <a href="https://wa.me/4915254113795" target="_blank" rel="noopener noreferrer"
                style="color:var(--c-mint); font-size:var(--t-sm);">
@@ -119,7 +113,7 @@
 
     <!-- Bottom bar -->
     <div class="site-footer__bottom">
-      <span>&copy; <?php echo date('Y'); ?> MyContentPilot — Iqbal Nazir. Alle Rechte vorbehalten.</span>
+      <span>&copy; <?php echo date('Y'); ?> MyContentPilot. Alle Rechte vorbehalten.</span>
       <nav class="footer-legal" aria-label="Rechtliche Links">
         <a href="<?php echo esc_url( home_url('/impressum') ); ?>">Impressum</a>
         <a href="<?php echo esc_url( home_url('/datenschutz') ); ?>">Datenschutz</a>

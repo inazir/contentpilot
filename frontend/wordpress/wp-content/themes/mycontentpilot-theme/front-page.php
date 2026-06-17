@@ -273,6 +273,10 @@ get_header(); ?>
         </div>
         <div class="platform-pill platform-pill--live">
           <span class="platform-pill__dot"></span>
+          LinkedIn
+        </div>
+        <div class="platform-pill platform-pill--live">
+          <span class="platform-pill__dot"></span>
           WordPress
         </div>
       </div>
