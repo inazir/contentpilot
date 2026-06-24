@@ -133,6 +133,19 @@ Publishing
 ```
 
 ---
+## Recent Milestones & Updates
+
+### June 2026 — LinkedIn Live Publishing Integration
+- **Status:** Fully Functional & Verified (`REAL` mode active).
+- **Infrastructure Shift:** Successfully migrated from the deprecated `/v2/ugcPosts` nested schema architecture to the modern, flat LinkedIn REST API (`/rest/posts`) using explicit versioned headers (`LinkedIn-Version: 202603` and `X-Restli-Protocol-Version: 2.0.0`).
+- **Authorization & Scopes:** - Provisioned a dedicated business application (`ID: 256380148`) with Development Tier access to the **Community Management API**.
+  - Isolated and locked down the required corporate publishing permission scope: `w_organization_social`.
+- **Core Pipeline Implementation:**
+  - Implemented robust corporate URN resolution (`_build_author_urn`) inside `shared/social/linkedin.py` to seamlessly parse raw numerical page IDs into validated `urn:li:organization:<id>` elements.
+  - Resolved structural `422 (Invalid Urn Format)` and `400 (Organization permissions)` validation blockers.
+- **Verification & Testing:**
+  - Created automated live verification script (`scripts/test_linkedin_real.py`).
+  - Successfully ran integration suite tests confirming zero regressions across the multi-tenant routing core (`test_publish_pipeline.py`) and the WordPress subsystem (`test_wordpress.py`).
 
 ## Phase: Mietvertrag Generator v2.0 Refactor
 
