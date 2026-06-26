@@ -92,6 +92,26 @@ def init_brand_db() -> None:
         )
     """)
 
+    # --- Content strategy config (Phase 13C — dashboard) ---
+    # One row per (brand_id, platform). Mirrors brand_credentials shape
+    # deliberately: same JSON-blob pattern, same connection helper, same
+    # upsert style. Stores non-secret content strategy (topics, hashtags,
+    # CTA text, image overlay text, first comment, etc.) — kept separate
+    # from brand_credentials because credentials are secrets (tokens,
+    # passwords) and content config is not; the dashboard can show/log
+    # content config freely without ever touching the credential path.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS brand_content_config (
+            id           INTEGER PRIMARY KEY,
+            brand_id     INTEGER NOT NULL,
+            platform     TEXT    NOT NULL,
+            config_json  TEXT    NOT NULL,
+            updated_at   TEXT    NOT NULL,
+            UNIQUE(brand_id, platform),
+            FOREIGN KEY(brand_id) REFERENCES brands(id)
+        )
+    """)
+
     conn.commit()
 
     # --- Migrate schedules: add brand_id if missing ---
@@ -231,6 +251,37 @@ class BrandCredential:
             credential_type=row["credential_type"],
             credential_json=row["credential_json"],
             created_at=row["created_at"],
+        )
+
+
+@dataclass
+class ContentConfig:
+    """
+    Content strategy configuration for one brand+platform pair.
+
+    Distinct from BrandCredential: this holds non-secret editorial/content
+    settings (topics, hashtags, CTA text, image overlay text, first comment
+    template, etc.) that a dashboard form edits directly. Shape of
+    config_json is platform-specific and owned by the dashboard layer —
+    shared/brands does not validate its contents, only persists it.
+    """
+    id: int
+    brand_id: int
+    platform: str
+    config_json: str
+    updated_at: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return json.loads(self.config_json)
+
+    @classmethod
+    def from_row(cls, row: sqlite3.Row) -> "ContentConfig":
+        return cls(
+            id=row["id"],
+            brand_id=row["brand_id"],
+            platform=row["platform"],
+            config_json=row["config_json"],
+            updated_at=row["updated_at"],
         )
 
 

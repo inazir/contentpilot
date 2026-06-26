@@ -19,6 +19,7 @@ from .models import (
     Brand,
     BrandCredential,
     BrandProfile,
+    ContentConfig,
     _connect,
 )
 
@@ -204,6 +205,80 @@ def upsert_credential(brand_id: int, credential_type: str, data: dict) -> None:
     conn.close()
     logger.info(
         "credential_upserted | brand_id=%d | type=%s", brand_id, credential_type
+    )
+
+
+# ---------------------------------------------------------------------------
+# Brand Content Config (Phase 13C — dashboard)
+# ---------------------------------------------------------------------------
+
+def get_content_config(brand_id: int, platform: str) -> Optional[ContentConfig]:
+    """Fetch content strategy config for one brand+platform. None if unset."""
+    conn = _connect()
+    row = conn.execute(
+        """
+        SELECT * FROM brand_content_config
+        WHERE brand_id = ? AND platform = ?
+        """,
+        (brand_id, platform),
+    ).fetchone()
+    conn.close()
+    return ContentConfig.from_row(row) if row else None
+
+
+def get_all_content_config(brand_id: int) -> list[ContentConfig]:
+    """Fetch content config for every platform configured for this brand."""
+    conn = _connect()
+    rows = conn.execute(
+        "SELECT * FROM brand_content_config WHERE brand_id = ? ORDER BY platform",
+        (brand_id,),
+    ).fetchall()
+    conn.close()
+    return [ContentConfig.from_row(r) for r in rows]
+
+
+def upsert_content_config(brand_id: int, platform: str, data: dict) -> None:
+    """
+    Store content strategy config (topics, hashtags, CTA text, image
+    overlay text, first comment template, etc.) as a JSON blob.
+
+    Caller (dashboard layer) owns field validation — this function only
+    persists whatever dict it's given.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    config_json = json.dumps(data)
+    conn = _connect()
+
+    existing = conn.execute(
+        """
+        SELECT id FROM brand_content_config
+        WHERE brand_id = ? AND platform = ?
+        """,
+        (brand_id, platform),
+    ).fetchone()
+
+    if existing:
+        conn.execute(
+            """
+            UPDATE brand_content_config
+            SET config_json = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (config_json, now, existing["id"]),
+        )
+    else:
+        conn.execute(
+            """
+            INSERT INTO brand_content_config (brand_id, platform, config_json, updated_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (brand_id, platform, config_json, now),
+        )
+
+    conn.commit()
+    conn.close()
+    logger.info(
+        "content_config_upserted | brand_id=%d | platform=%s", brand_id, platform
     )
 
 

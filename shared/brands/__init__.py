@@ -4,6 +4,7 @@ from .models import (
     BrandProfile,
     BrandCredential,
     BrandContext,
+    ContentConfig,
     init_brand_db,
     seed_default_brand,
 )
@@ -25,6 +26,9 @@ from .repository import (
     upsert_profile,
     upsert_credential,
     get_credentials,
+    get_content_config,
+    get_all_content_config,
+    upsert_content_config,
 )
 
 __all__ = [
@@ -32,6 +36,7 @@ __all__ = [
     "BrandProfile",
     "BrandCredential",
     "BrandContext",
+    "ContentConfig",
     "init_brand_db",
     "seed_default_brand",
     "get_brand_context",
@@ -49,4 +54,7 @@ __all__ = [
     "upsert_profile",
     "upsert_credential",
     "get_credentials",
+    "get_content_config",
+    "get_all_content_config",
+    "upsert_content_config",
 ]
