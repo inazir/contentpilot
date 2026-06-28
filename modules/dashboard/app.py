@@ -1,10 +1,12 @@
 # modules/dashboard/app.py
 """
-ContentPilot Dashboard — Phase 13C Step 3.
+ContentPilot Dashboard — Phase 13C Step 4.
 
-Step 2 (read-only brand view) + Step 3 (single-admin session auth).
-Brand routes now require a valid session; /login, /logout, /healthz
-stay open.
+Adds a dedicated Facebook config view: merges brand_credentials
+(facebook) with brand_content_config (facebook) into one page.
+Still read-only — write path is Step 5.
+
+Steps 2+3 routes (index, login, brand_view, healthz) unchanged.
 """
 import os
 import sys
@@ -17,7 +19,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from shared.brands import (
     get_brand_context_by_slug,
+    get_brand_by_slug,
     get_all_content_config,
+    get_content_config,
+    get_credentials,
+    CRED_FACEBOOK,
 )
 from auth import (
     SESSION_COOKIE_NAME,
@@ -30,10 +36,18 @@ app = FastAPI(title="ContentPilot Dashboard")
 
 
 def _require_session(request: Request) -> None:
-    """Raise 401 if the request has no valid session cookie."""
     token = request.cookies.get(SESSION_COOKIE_NAME, "")
     if not verify_session_token(token):
         raise HTTPException(status_code=401, detail="Login required")
+
+
+def _mask_token(token: str | None) -> str:
+    """Never render a real access token in HTML. Show a masked preview only."""
+    if not token:
+        return "(not set)"
+    if len(token) <= 8:
+        return "****"
+    return f"{token[:4]}...{token[-4:]}"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -42,7 +56,8 @@ def index():
     <html><body style="font-family: sans-serif; padding: 2rem;">
         <h1>ContentPilot Dashboard</h1>
         <p><a href="/login">Login</a></p>
-        <p>Once logged in, try <a href="/brands/germanysupport">/brands/germanysupport</a></p>
+        <p>Once logged in, try <a href="/brands/germanysupport">/brands/germanysupport</a>
+           or <a href="/brands/germanysupport/facebook">/brands/germanysupport/facebook</a></p>
     </body></html>
     """
 
@@ -106,7 +121,7 @@ def brand_view(slug: str, request: Request):
                 f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in data.items()
             )
             config_html += f"""
-            <h3>{cfg.platform}</h3>
+            <h3><a href="/brands/{slug}/{cfg.platform}">{cfg.platform}</a></h3>
             <table border="1" cellpadding="6">{rows}</table>
             """
     else:
@@ -124,6 +139,48 @@ def brand_view(slug: str, request: Request):
         <p><strong>Publish mode:</strong> {ctx.publish_mode}</p>
         <h2>Content Config</h2>
         {config_html}
+    </body></html>
+    """
+
+
+@app.get("/brands/{slug}/facebook", response_class=HTMLResponse)
+def facebook_config_view(slug: str, request: Request):
+    _require_session(request)
+
+    brand = get_brand_by_slug(slug)
+    if not brand:
+        raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
+
+    cred = get_credentials(brand.id, CRED_FACEBOOK)
+    cred_data = cred.as_dict() if cred else {}
+
+    content = get_content_config(brand.id, "facebook")
+    content_data = content.as_dict() if content else {}
+
+    page_id = cred_data.get("page_id", "(not set)")
+    masked_token = _mask_token(cred_data.get("access_token"))
+
+    content_rows = "".join(
+        f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in content_data.items()
+    ) or "<tr><td colspan='2'><em>No content config saved yet.</em></td></tr>"
+
+    return f"""
+    <html><body style="font-family: sans-serif; padding: 2rem;">
+        <p><a href="/brands/{slug}">&larr; back to {slug}</a> | <a href="/logout">Logout</a></p>
+        <h1>{brand.name} — Facebook</h1>
+
+        <h2>Connection</h2>
+        <table border="1" cellpadding="6">
+            <tr><td>Page ID</td><td>{page_id}</td></tr>
+            <tr><td>Access Token</td><td>{masked_token}</td></tr>
+        </table>
+
+        <h2>Content Strategy</h2>
+        <table border="1" cellpadding="6">
+            {content_rows}
+        </table>
+
+        <p><em>Edit form coming in Step 5.</em></p>
     </body></html>
     """
 
