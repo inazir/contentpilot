@@ -72,6 +72,20 @@ services:
     depends_on:
       - wordpress
 
+  # --- DASHBOARD CMS LAYER ---
+  dashboard:
+    build:
+      context: ../..
+      dockerfile: modules/dashboard/Dockerfile
+    env_file: ../../.env
+    volumes:
+      - ../../data:/app/data
+    ports:
+      - "8090:8090"
+    restart: unless-stopped
+    user: "${DOCKER_UID}:${DOCKER_GID}"
+    networks:
+      - cp_isolated_network
 volumes:
   mycontentpilot_isolated_mysql_data:
     name: mycontentpilot-site_mycontentpilot_isolated_mysql_data
