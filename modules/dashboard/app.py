@@ -41,6 +41,9 @@ from facebook_form import (
     merge_credential_update,
     validate_content_config,
 )
+from facebook_preview import build_preview_plan
+
+from shared.ai import get_ai_config, ai_complete, AIClientError
 
 app = FastAPI(title="ContentPilot Dashboard")
 
@@ -173,7 +176,8 @@ def facebook_config_view(slug: str, request: Request):
     <html><body style="font-family: sans-serif; padding: 2rem;">
         <p><a href="/brands/{slug}">&larr; back to {slug}</a> | <a href="/logout">Logout</a></p>
         <h1>{brand.name} — Facebook</h1>
-        <p><a href="/brands/{slug}/facebook/edit"><strong>Edit settings &rarr;</strong></a></p>
+        <p><a href="/brands/{slug}/facebook/edit"><strong>Edit settings &rarr;</strong></a>
+        | <a href="/brands/{slug}/facebook/preview"><strong>Generate preview &rarr;</strong></a></p>
 
         <h2>Connection</h2>
         <table border="1" cellpadding="6">
@@ -346,6 +350,86 @@ def facebook_edit_submit(
     upsert_content_config(brand.id, "facebook", new_content_config)
 
     return RedirectResponse(url=f"/brands/{slug}/facebook", status_code=303)
+
+
+@app.get("/brands/{slug}/facebook/preview", response_class=HTMLResponse)
+def facebook_preview(slug: str, request: Request):
+    _require_session(request)
+
+    brand = get_brand_by_slug(slug)
+    if not brand:
+        raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
+
+    content = get_content_config(brand.id, "facebook")
+    content_data = content.as_dict() if content else {}
+
+    try:
+        plan = build_preview_plan(content_data)
+    except ValueError as exc:
+        return HTMLResponse(f"""
+        <html><body style="font-family: sans-serif; padding: 2rem;">
+            <p><a href="/brands/{slug}/facebook">&larr; back</a></p>
+            <h1>Preview unavailable</h1>
+            <p style="color:red;">{exc}</p>
+        </body></html>
+        """, status_code=400)
+
+    # Generate the actual caption text via the shared AI layer.
+    # Uses the daily_news module's AI config (provider/model/fallback)
+    # since there's no dashboard-specific AI config yet — same models,
+    # just a brand-aware prompt instead of the hardcoded topic list.
+    ai_error = None
+    caption_text = None
+    try:
+        cfg = get_ai_config("daily_news")
+        caption_text = ai_complete(
+            cfg,
+            prompt=plan["user_prompt"],
+            system=plan["system_prompt"],
+        )
+    except AIClientError as exc:
+        ai_error = str(exc)
+
+    caption_html = (
+        f"<p>{caption_text}</p>" if caption_text
+        else f'<p style="color:red;">Caption generation failed: {ai_error}</p>'
+    )
+
+    img = plan["image_plan"]
+
+    return f"""
+    <html><body style="font-family: sans-serif; padding: 2rem; max-width: 700px;">
+        <p><a href="/brands/{slug}/facebook">&larr; back</a> | <a href="/logout">Logout</a></p>
+        <h1>Preview — {brand.name} Facebook Post</h1>
+        <p><em>This is a dry-run preview. Nothing was published or saved.</em></p>
+
+        <h2>Topic used this time</h2>
+        <p>{plan['topic']}</p>
+
+        <h2>Generated caption</h2>
+        {caption_html}
+
+        <h2>Hashtags</h2>
+        <p>{plan['hashtag_line'] or '(none configured)'}</p>
+
+        <h2>Image plan</h2>
+        <table border="1" cellpadding="6">
+            <tr><td>Source</td><td>{img['source']}</td></tr>
+            <tr><td>Search query</td><td>{img['search_query']}</td></tr>
+            <tr><td>Overlay title</td><td>{img['overlay_title']}</td></tr>
+            <tr><td>Overlay subtitle</td><td>{img['overlay_subtitle'] or '(none)'}</td></tr>
+        </table>
+        <p><small>{img['note']}</small></p>
+
+        <h2>First comment (would post automatically)</h2>
+        <p>{plan['first_comment'] or '(none configured)'}</p>
+
+        <h2>CTA</h2>
+        <p>{plan['cta_text'] or '(none configured)'}</p>
+
+        <p><a href="/brands/{slug}/facebook/preview">Generate another preview</a></p>
+    </body></html>
+    """
 
 
 @app.get("/healthz")
