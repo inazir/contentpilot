@@ -5,6 +5,7 @@ All environment variable reads go through here.
 Nothing else should call os.getenv() for platform/publish config.
 
 AI-specific config still lives in shared/ai/config.py (backward compat).
+That file will eventually merge here.
 """
 
 import os
@@ -47,6 +48,29 @@ def load_social_targets() -> dict[str, SocialTarget]:
     """
     Reads all targets from SOCIAL_TARGETS env var and builds
     a dict of {target_key: SocialTarget}.
+
+    SOCIAL_TARGETS format: "gs_facebook_main,gs_facebook_brand2,gs_instagram_main"
+
+    Each target must have these env vars:
+    - SOCIAL__{TARGET_KEY}__PLATFORM
+    - SOCIAL__{TARGET_KEY}__ENABLED
+    - SOCIAL__{TARGET_KEY}__PAGE_ID
+    - SOCIAL__{TARGET_KEY}__ACCESS_TOKEN
+    - SOCIAL__{TARGET_KEY}__NAME (optional)
+
+    Example:
+        SOCIAL_TARGETS=gs_facebook_main,gs_facebook_brand2
+        SOCIAL__GS_FACEBOOK_MAIN__PLATFORM=facebook
+        SOCIAL__GS_FACEBOOK_MAIN__ENABLED=true
+        SOCIAL__GS_FACEBOOK_MAIN__PAGE_ID=111111111
+        SOCIAL__GS_FACEBOOK_MAIN__ACCESS_TOKEN=EAAxxxxx
+        SOCIAL__GS_FACEBOOK_BRAND2__PLATFORM=facebook
+        SOCIAL__GS_FACEBOOK_BRAND2__ENABLED=true
+        SOCIAL__GS_FACEBOOK_BRAND2__PAGE_ID=222222222
+        SOCIAL__GS_FACEBOOK_BRAND2__ACCESS_TOKEN=EAAyyyyy
+
+    Returns:
+        dict[str, SocialTarget]: Empty dict if SOCIAL_TARGETS is not set.
     """
     raw = os.getenv("SOCIAL_TARGETS", "").strip()
     if not raw:
@@ -61,7 +85,7 @@ def load_social_targets() -> dict[str, SocialTarget]:
 
         platform = os.getenv(f"{prefix}__PLATFORM", "").strip().lower()
         if not platform:
-            continue
+            continue   # skip incomplete target definitions
 
         targets[normalized_key] = SocialTarget(
             key=key,
@@ -73,6 +97,107 @@ def load_social_targets() -> dict[str, SocialTarget]:
         )
 
     return targets
+
+
+def load_social_targets_for_brand(
+    brand_id: int, target_keys: list[str] | None = None
+) -> dict[str, SocialTarget]:
+    """
+    Brand-aware variant of load_social_targets(). Phase 13C Step 7a.
+
+    Resolution priority per target_key:
+        1. brand_credentials row (credential_type='facebook' or 'instagram')
+           for this brand_id, IF it contains page_id/access_token
+        2. Fall back to load_social_targets()'s env-based resolution for
+           that same key (so existing env-configured brands/keys keep
+           working with zero changes — this function is purely additive)
+
+    Args:
+        brand_id:    The brand whose credentials to check first.
+        target_keys: Which target keys to resolve. If None, uses every
+                      key that load_social_targets() would find from env
+                      (SOCIAL_TARGETS) — preserves current behavior when
+                      no dashboard-configured credential exists yet.
+
+    Returns:
+        dict[str, SocialTarget] — same shape as load_social_targets().
+
+    Note: this function intentionally does NOT replace load_social_targets().
+    Both exist side by side. Callers (e.g. runner.py) opt into brand-aware
+    resolution explicitly by calling this function with a brand_id.
+    """
+    # Lazy import: shared.brands depends on shared.config indirectly via
+    # the same data dir conventions, and importing at module level here
+    # would risk a circular import if shared.brands ever imports from
+    # shared.config in the future. Importing inside the function avoids
+    # that risk entirely.
+    from shared.brands import get_credentials, CRED_FACEBOOK, CRED_INSTAGRAM
+
+    env_targets = load_social_targets()
+
+    if target_keys is None:
+        target_keys = list(env_targets.keys())
+
+    # Map platform name -> which credential_type constant to check.
+    # Only facebook and instagram have brand_credentials support today;
+    # anything else falls straight through to the env-based result.
+    _CRED_TYPE_BY_PLATFORM = {
+        "facebook": CRED_FACEBOOK,
+        "instagram": CRED_INSTAGRAM,
+    }
+
+    resolved: dict[str, SocialTarget] = {}
+
+    for key in target_keys:
+        normalized_key = key.strip().lower()
+        env_target = env_targets.get(normalized_key)
+
+        if env_target is None:
+            # No env definition for this key at all — nothing to merge
+            # with, and we don't know its platform. Skip it; this
+            # mirrors load_social_targets()'s existing behavior of
+            # silently skipping incomplete target definitions.
+            continue
+
+        cred_type = _CRED_TYPE_BY_PLATFORM.get(env_target.platform)
+        if cred_type is None:
+            # Unsupported platform for brand_credentials lookup (e.g.
+            # future platforms not yet added to brand_credentials) —
+            # use the env-resolved target as-is.
+            resolved[normalized_key] = env_target
+            continue
+
+        cred = get_credentials(brand_id, cred_type)
+        if cred is None:
+            # No dashboard-saved credential yet for this brand+platform —
+            # fall back to whatever load_social_targets() already found.
+            resolved[normalized_key] = env_target
+            continue
+
+        cred_data = cred.as_dict()
+        db_page_id = cred_data.get("page_id", "").strip()
+        db_access_token = cred_data.get("access_token", "").strip()
+
+        if not db_page_id and not db_access_token:
+            # Credential row exists but is empty (e.g. only one field
+            # was ever saved) — fall back to env rather than building
+            # a SocialTarget with missing required fields.
+            resolved[normalized_key] = env_target
+            continue
+
+        # Build a SocialTarget using DB values where present, env
+        # values as fallback for any individual field left unset in
+        # the DB credential.
+        resolved[normalized_key] = SocialTarget(
+            key=env_target.key,
+            platform=env_target.platform,
+            enabled=env_target.enabled,  # enabled flag stays env-controlled for now
+            page_id=db_page_id or env_target.page_id,
+            access_token=db_access_token or env_target.access_token,
+            name=env_target.name,
+        )
+
+    return resolved
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +214,6 @@ def get_db_path() -> str:
 
 def get_log_level() -> str:
     return os.getenv("LOG_LEVEL", "INFO").strip().upper()
-
 
 # ---------------------------------------------------------------------------
 # WordPress

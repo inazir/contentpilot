@@ -37,6 +37,7 @@ from shared.social import publish_post
 from shared.models import ExecutionSummary
 from shared.ingestion import fetch_feeds, get_feed_urls, get_max_articles, get_feed_timeout
 from generator import generate_news_post, summarize_article
+from shared.brands import get_content_config
 
 if TYPE_CHECKING:
     from shared.brands.models import BrandContext
@@ -67,6 +68,28 @@ def _get_publish_platforms(brand_context: Optional["BrandContext"] = None) -> li
         return brand_context.social_targets
     raw = os.getenv("DAILY_NEWS_TARGETS", "").strip()
     return [t.strip() for t in raw.split(",") if t.strip()] if raw else []
+
+
+def _resolve_facebook_content_config(brand_context) -> dict | None:
+    """
+    Returns the brand's saved Facebook content config, or None if
+    no brand_context is available or no config has been saved yet.
+    None means generator.py falls back to its hardcoded defaults —
+    this preserves exact existing behavior for any brand with no
+    dashboard config saved.
+    """
+    if not brand_context:
+        return None
+    try:
+        config = get_content_config(brand_context.brand_id, "facebook")
+    except Exception as exc:
+        logger.warning(
+            "Could not load content config for brand %s: %s — "
+            "falling back to default topics/prompt",
+            brand_context.brand_id, exc,
+        )
+        return None
+    return config.as_dict() if config else None
 
 
 def _brand_log(brand_context: Optional["BrandContext"] = None) -> str:
@@ -141,6 +164,7 @@ def _build_asset_bundle(
     media_cfg,
     summary_obj: ExecutionSummary,
     brand_context: Optional["BrandContext"] = None,
+    content_config: dict | None = None,
 ):
     if not media_cfg.enabled:
         return None
@@ -218,6 +242,7 @@ def _upload_featured_image(
     media_cfg,
     summary_obj: ExecutionSummary,
     brand_context: Optional["BrandContext"] = None,
+    content_config: dict | None = None,
 ) -> int | None:
     if not media_cfg.enabled or not media_cfg.featured_images:
         return None
@@ -258,6 +283,7 @@ def _publish_to_wordpress(
     featured_media_id: int | None,
     summary_obj: ExecutionSummary,
     brand_context: Optional["BrandContext"] = None,
+    content_config: dict | None = None,
 ) -> str | None:
     wp_enabled = os.getenv("DAILY_NEWS_ENABLE_WORDPRESS", "false").strip().lower()
     if wp_enabled not in {"1", "true", "yes"}:
@@ -328,6 +354,8 @@ def main(brand_context: Optional["BrandContext"] = None) -> ExecutionSummary:
     media_cfg = _get_brand_media_config(brand_context)
     summary   = ExecutionSummary(module="daily_news", dry_run=args.dry_run)
 
+    content_config = _resolve_facebook_content_config(brand_context)
+
     init_db()
 
     logger.info(
@@ -338,7 +366,7 @@ def main(brand_context: Optional["BrandContext"] = None) -> ExecutionSummary:
     )
 
     if args.topic:
-        return _run_single_topic(args.topic, summary, args.dry_run, mode, media_cfg, brand_context)
+        return _run_single_topic(args.topic, summary, args.dry_run, mode, media_cfg, brand_context, content_config=content_config)
 
     feed_urls = get_feed_urls("DAILY_NEWS_RSS_FEEDS")
     if not feed_urls:
@@ -371,7 +399,7 @@ def main(brand_context: Optional["BrandContext"] = None) -> ExecutionSummary:
             continue
 
         try:
-            post_text = summarize_article(article)
+            post_text = summarize_article(article, content_config=content_config)
             summary.posts_generated += 1
         except Exception as exc:
             logger.error("summarization_failed | title=%r | error=%s%s", article.title, exc, _brand_log(brand_context))
@@ -429,6 +457,7 @@ def _run_single_topic(
     mode: str,
     media_cfg,
     brand_context: Optional["BrandContext"] = None,
+    content_config: dict | None = None,
 ) -> ExecutionSummary:
     logger.info("single_topic_path | topic=%r%s", topic, _brand_log(brand_context))
 
@@ -444,7 +473,7 @@ def _run_single_topic(
         return summary
 
     try:
-        post_text = generate_news_post(topic)
+        post_text = generate_news_post(topic, content_config=content_config)
         summary.posts_generated = 1
     except Exception as exc:
         logger.error("generation_failed | error=%s%s", exc, _brand_log(brand_context))

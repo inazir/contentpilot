@@ -22,6 +22,7 @@ import logging
 from shared.config import (
     get_publish_mode,
     load_social_targets,
+    load_social_targets_for_brand,
 )
 from shared.store import already_published, compute_content_hash, record_publish
 
@@ -45,6 +46,7 @@ def publish_post(
     content: dict,
     targets: list[str],
     module_name: str,
+    brand_context=None,
 ) -> PublishSummary:
     """
     Publish content to all requested targets.
@@ -68,7 +70,27 @@ def publish_post(
     image_url = content.get("image_url")
     content_hash = compute_content_hash(text)
 
-    all_targets = load_social_targets()
+    # Phase 13C Step 7c: resolve credentials brand-aware when a
+    # brand_context is provided, so dashboard-saved page_id/access_token
+    # (Step 5) actually reach the real publish call. Falls back to the
+    # original env-only resolution when brand_context is None — this is
+    # the exact behavior every existing caller (tests, legacy cron with
+    # no brand wiring) already relies on.
+    if brand_context is not None:
+        try:
+            brand_id_for_log = brand_context.brand_id
+            all_targets = load_social_targets_for_brand(
+                brand_id=brand_id_for_log, target_keys=targets
+            )
+        except Exception as exc:
+            logger.warning(
+                "Brand-aware target resolution failed: %s — "
+                "falling back to env-only resolution",
+                exc,
+            )
+            all_targets = load_social_targets()
+    else:
+        all_targets = load_social_targets()
 
     for target_key in targets:
         target_key = target_key.strip().lower()

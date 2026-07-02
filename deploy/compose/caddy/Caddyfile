@@ -15,3 +15,7 @@ fs.mycontentpilot.de {
         header_up X-Forwarded-Proto https
     }
 }
+
+germanysupport.mycontentpilot.de {
+    reverse_proxy 127.0.0.1:8090
+}
