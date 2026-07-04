@@ -1,14 +1,31 @@
 # modules/dashboard/app.py
 """
 ContentPilot Dashboard — Phase 13C Step 8.
+
+Adds hostname-based brand scoping: hitting
+germanysupport.mycontentpilot.de auto-resolves to the germanysupport
+brand, so /brands/{slug}/... routes are no longer needed from the
+subdomain — the slug is inferred from the Host header.
+
+Subdomain pattern: {slug}.mycontentpilot.de
+Fallback: if the host header doesn't match a known brand subdomain
+(e.g. direct IP access, localhost, healthz from a load balancer),
+all existing routes still work exactly as before — slug must be
+provided explicitly in the URL path.
+
+Steps 2–7 routes are unchanged; subdomain resolution is purely
+additive.
 """
 import os
 import sys
+import logging
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "shared", "scheduler"))
 
-from fastapi import FastAPI, HTTPException, Request, Form
+from fastapi import FastAPI, HTTPException, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from shared.brands import (
@@ -34,21 +51,41 @@ from facebook_form import (
     validate_content_config,
 )
 from facebook_preview import build_preview_plan
+from facebook_schedule import (
+    parse_schedule_form,
+    validate_schedule,
+    schedule_to_display,
+    merge_schedule_into_config,
+)
+from facebook_csv import parse_csv_bytes, merge_topics, validate_topics_list
+from schedule_config import (
+    sync_schedule_to_db,
+    get_active_schedules_for_brand,
+    disable_schedules_for_brand,
+)
 from hostname import slug_from_host
 from shared.ai import get_ai_config, ai_complete, AIClientError
 
 app = FastAPI(title="ContentPilot Dashboard")
 
+class RedirectLoginException(Exception):
+    pass
+
+@app.exception_handler(RedirectLoginException)
+async def redirect_login_handler(request: Request, exc: RedirectLoginException):
+    return RedirectResponse(url="/login", status_code=303)
+
+
 # ---------------------------------------------------------------------------
-# Session Helper
+# Session + token helpers
 # ---------------------------------------------------------------------------
 
-def _require_session_html(request: Request):
-    """Manual session check that returns a RedirectResponse instead of raising 401."""
+
+def _require_session(request: Request) -> None:
     token = request.cookies.get(SESSION_COOKIE_NAME, "")
     if not verify_session_token(token):
-        return RedirectResponse(url="/login", status_code=302)
-    return None
+        raise RedirectLoginException()
+
 
 def _mask_token(token: str | None) -> str:
     if not token:
@@ -66,6 +103,7 @@ def _mask_token(token: str | None) -> str:
 def index(request: Request):
     slug = slug_from_host(request.headers.get("host", ""))
     if slug:
+        # Hitting germanysupport.mycontentpilot.de/ → redirect to brand view
         return RedirectResponse(url=f"/brands/{slug}", status_code=302)
 
     return """
@@ -79,7 +117,7 @@ def index(request: Request):
 
 
 # ---------------------------------------------------------------------------
-# Auth routes
+# Auth routes (unchanged)
 # ---------------------------------------------------------------------------
 
 @app.get("/login", response_class=HTMLResponse)
@@ -111,7 +149,9 @@ def login_submit(password: str = Form(...)):
         value=token,
         httponly=True,
         samesite="lax",
-        secure=os.getenv("DASHBOARD_COOKIE_SECURE", "true").lower() == "true",
+        secure=os.getenv(
+            "DASHBOARD_COOKIE_SECURE", "true"
+        ).lower() == "true",
         max_age=60 * 60 * 12,
     )
     return response
@@ -130,8 +170,7 @@ def logout():
 
 @app.get("/brands/{slug}", response_class=HTMLResponse)
 def brand_view(slug: str, request: Request):
-    redir = _require_session_html(request)
-    if redir: return redir
+    _require_session(request)
 
     try:
         ctx = get_brand_context_by_slug(slug)
@@ -170,6 +209,7 @@ def brand_view(slug: str, request: Request):
         <p><strong>Website:</strong> {ctx.website_url or "(none)"}</p>
         <p><strong>Social targets:</strong> {targets_html}</p>
         <p><strong>Publish mode:</strong> {ctx.publish_mode}</p>
+        <p><a href="/brands/{slug}/history">📋 View post history</a></p>
         <h2>Content Config</h2>
         {config_html}
     </body></html>
@@ -177,13 +217,12 @@ def brand_view(slug: str, request: Request):
 
 
 # ---------------------------------------------------------------------------
-# Facebook — read, edit, preview
+# Facebook — read, edit, preview (unchanged from Steps 4-6)
 # ---------------------------------------------------------------------------
 
 @app.get("/brands/{slug}/facebook", response_class=HTMLResponse)
 def facebook_config_view(slug: str, request: Request):
-    redir = _require_session_html(request)
-    if redir: return redir
+    _require_session(request)
 
     brand = get_brand_by_slug(slug)
     if not brand:
@@ -201,6 +240,33 @@ def facebook_config_view(slug: str, request: Request):
         f"<tr><td>{k}</td><td>{v}</td></tr>"
         for k, v in content_data.items()
     ) or "<tr><td colspan='2'><em>No content config saved yet.</em></td></tr>"
+
+    # Phase 13D-Ext: show active schedule rows
+    active_schedules = get_active_schedules_for_brand(brand.id, "daily_news")
+    if active_schedules:
+        sched_rows = "".join(
+            f"<tr><td>{r['cron_expression']}</td>"
+            f"<td style='color:green;'>active</td></tr>"
+            for r in active_schedules
+        )
+        sched_html = f"""
+        <table border="1" cellpadding="6">
+            <tr><th>Cron expression (UTC)</th><th>Status</th></tr>
+            {sched_rows}
+        </table>
+        <form method="post"
+              action="/brands/{slug}/facebook/schedule/pause"
+              style="display:inline;">
+            <button type="submit"
+                    style="margin-top:0.5rem;color:red;">
+                ⏸ Pause scheduling
+            </button>
+        </form>
+        """
+    else:
+        sched_html = (
+            "<p><em>No active schedule. Save settings to activate.</em></p>"
+        )
 
     return f"""
     <html><body style="font-family: sans-serif; padding: 2rem;">
@@ -220,6 +286,8 @@ def facebook_config_view(slug: str, request: Request):
         </table>
         <h2>Content Strategy</h2>
         <table border="1" cellpadding="6">{content_rows}</table>
+        <h2>Posting Schedule</h2>
+        {sched_html}
     </body></html>
     """
 
@@ -234,6 +302,21 @@ def _render_facebook_edit_form(
     if errors:
         items = "".join(f"<li>{e}</li>" for e in errors)
         error_html = f'<ul style="color:red;">{items}</ul>'
+
+    sched = schedule_to_display(content_data.get("schedule"))
+
+    freq_options = "".join(
+        f'<option value="{v}" {"selected" if sched["frequency"] == v else ""}>{l}</option>'
+        for v, l in [("daily","Once daily"),("twice_daily","Twice daily"),("weekly","Weekly")]
+    )
+
+    day_checkboxes = "".join(
+        f'<label style="margin-right:1rem;">'
+        f'<input type="checkbox" name="schedule_active_days_cb" value="{i}" '
+        f'{"checked" if i in (content_data.get("schedule") or {}).get("active_days", [0,1,2,3,4]) else ""}>'
+        f' {d}</label>'
+        for i, d in enumerate(["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
+    )
 
     return f"""
     <html><body style="font-family:sans-serif;padding:2rem;max-width:700px;">
@@ -252,8 +335,9 @@ def _render_facebook_edit_form(
                        style="width:100%;"
                        placeholder="Leave blank to keep existing token">
             </label>
+
             <h2>Content Strategy</h2>
-            <label>Caption topics <small>(comma-separated)</small><br>
+            <label>Caption topics <small>(comma-separated, or upload CSV below)</small><br>
                 <input type="text" name="caption_topics"
                        value="{list_field_to_text(content_data.get('caption_topics'))}"
                        style="width:100%;"></label><br><br>
@@ -275,7 +359,7 @@ def _render_facebook_edit_form(
                        style="width:100%;"></label><br><br>
             <label>Image source<br>
                 <select name="image_source" style="width:100%;">
-                    {" ".join(
+                    {"".join(
                         f'<option value="{s}" {"selected" if content_data.get("image_source") == s else ""}>{s}</option>'
                         for s in ["pexels", "pixabay", "unsplash"]
                     )}
@@ -286,7 +370,7 @@ def _render_facebook_edit_form(
                        style="width:100%;"></label><br><br>
             <label>Image subtitle template<br>
                 <input type="text" name="image_subtitle_template"
-                       value="{content_data.get("image_subtitle_template", "")}"
+                       value="{content_data.get('image_subtitle_template', '')}"
                        style="width:100%;"></label><br><br>
             <label>First comment template<br>
                 <textarea name="first_comment_template"
@@ -296,7 +380,44 @@ def _render_facebook_edit_form(
                 <input type="text" name="tone"
                        value="{content_data.get('tone', '')}"
                        style="width:100%;"></label><br><br>
+
+            <h2>Posting Schedule</h2>
+            <label>Frequency<br>
+                <select name="schedule_frequency" style="width:100%;">
+                    {freq_options}
+                </select></label><br><br>
+            <label>Posting times <small>(HH:MM UTC, comma-separated)</small><br>
+                <input type="text" name="schedule_times"
+                       value="{sched['times_text']}"
+                       style="width:100%;"></label><br><br>
+            <label>Active days<br>
+                {day_checkboxes}
+                <input type="hidden" name="schedule_active_days"
+                       id="schedule_active_days_hidden"
+                       value="{sched['active_days_text']}">
+            </label><br><br>
+            <label>Max posts per day (1–10)<br>
+                <input type="number" name="schedule_max_posts"
+                       value="{sched['max_posts']}" min="1" max="10"
+                       style="width:80px;"></label><br><br>
+
+            <p><small>⚠️ Schedule is saved and activates on next scheduler restart.
+            Use the Pause button on the settings page to stop posting.</small></p>
+
             <button type="submit">Save</button>
+        </form>
+
+        <hr>
+        <h2>Upload Topics from CSV</h2>
+        <p>Upload a .csv file with one topic per row to add to your topics list.</p>
+        <form method="post" action="/brands/{slug}/facebook/upload-topics"
+              enctype="multipart/form-data">
+            <input type="file" name="file" accept=".csv"><br><br>
+            <label>
+                <input type="checkbox" name="replace" value="1">
+                Replace all existing topics (default: merge)
+            </label><br><br>
+            <button type="submit">Upload</button>
         </form>
     </body></html>
     """
@@ -304,9 +425,7 @@ def _render_facebook_edit_form(
 
 @app.get("/brands/{slug}/facebook/edit", response_class=HTMLResponse)
 def facebook_edit_form(slug: str, request: Request):
-    redir = _require_session_html(request)
-    if redir: return redir
-
+    _require_session(request)
     brand = get_brand_by_slug(slug)
     if not brand:
         raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
@@ -335,10 +454,12 @@ def facebook_edit_submit(
     image_subtitle_template: str = Form(""),
     first_comment_template: str = Form(""),
     tone: str = Form(""),
+    schedule_frequency: str = Form("daily"),
+    schedule_times: str = Form("09:00"),
+    schedule_active_days: str = Form("0,1,2,3,4"),
+    schedule_max_posts: str = Form("1"),
 ):
-    redir = _require_session_html(request)
-    if redir: return redir
-
+    _require_session(request)
     brand = get_brand_by_slug(slug)
     if not brand:
         raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
@@ -356,17 +477,28 @@ def facebook_edit_submit(
         "tone": tone,
     }
     new_content_config = build_content_config(form)
-    errors = validate_content_config(new_content_config)
-    if errors:
+
+    schedule_form = {
+        "schedule_frequency": schedule_frequency,
+        "schedule_times": schedule_times,
+        "schedule_active_days": schedule_active_days,
+        "schedule_max_posts": schedule_max_posts,
+    }
+    schedule = parse_schedule_form(schedule_form)
+
+    all_errors = validate_content_config(new_content_config) + validate_schedule(schedule)
+    if all_errors:
         return HTMLResponse(
             _render_facebook_edit_form(
                 slug=slug,
                 page_id=page_id,
                 content_data=new_content_config,
-                errors=errors,
+                errors=all_errors,
             ),
             status_code=400,
         )
+
+    new_content_config = merge_schedule_into_config(new_content_config, schedule)
 
     existing_cred = get_credentials(brand.id, CRED_FACEBOOK)
     existing_cred_data = existing_cred.as_dict() if existing_cred else {}
@@ -374,14 +506,34 @@ def facebook_edit_submit(
 
     upsert_credential(brand.id, CRED_FACEBOOK, merged_cred)
     upsert_content_config(brand.id, "facebook", new_content_config)
+
+    # Phase 13D-Ext: sync validated schedule to the schedules table
+    # so APScheduler picks it up on next restart.
+    try:
+        sync_schedule_to_db(
+            brand_id=brand.id,
+            module_name="daily_news",
+            schedule=schedule,
+        )
+        logger.info(
+            "schedule_synced_from_dashboard | brand_id=%d | frequency=%s",
+            brand.id, schedule.get("frequency"),
+        )
+    except Exception as exc:
+        # Never fail the whole save because of a scheduler write error.
+        # Content config is already saved; the schedule will be retried
+        # next time the user saves again.
+        logger.error(
+            "schedule_sync_failed | brand_id=%d | error=%s",
+            brand.id, exc,
+        )
+
     return RedirectResponse(url=f"/brands/{slug}/facebook", status_code=303)
 
 
 @app.get("/brands/{slug}/facebook/preview", response_class=HTMLResponse)
 def facebook_preview(slug: str, request: Request):
-    redir = _require_session_html(request)
-    if redir: return redir
-
+    _require_session(request)
     brand = get_brand_by_slug(slug)
     if not brand:
         raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
@@ -440,6 +592,175 @@ def facebook_preview(slug: str, request: Request):
         <p><a href="/brands/{slug}/facebook/preview">Generate another</a></p>
     </body></html>
     """
+
+
+# ---------------------------------------------------------------------------
+# Phase 13D Step 2 — CSV topic upload
+# ---------------------------------------------------------------------------
+
+@app.post("/brands/{slug}/facebook/upload-topics", response_class=HTMLResponse)
+async def facebook_upload_topics(
+    slug: str,
+    request: Request,
+    file: UploadFile = File(...),
+    replace: str = Form(""),
+):
+    _require_session(request)
+    brand = get_brand_by_slug(slug)
+    if not brand:
+        raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
+
+    raw = await file.read()
+    parse_errors: list[str] = []
+    uploaded_topics: list[str] = []
+
+    try:
+        uploaded_topics, parse_errors = parse_csv_bytes(raw)
+    except ValueError as exc:
+        return HTMLResponse(f"""
+        <html><body style="font-family:sans-serif;padding:2rem;">
+            <p><a href="/brands/{slug}/facebook/edit">&larr; back</a></p>
+            <h1>Upload failed</h1>
+            <p style="color:red;">{exc}</p>
+        </body></html>
+        """, status_code=400)
+
+    validation_errors = validate_topics_list(uploaded_topics)
+    if validation_errors:
+        return HTMLResponse(f"""
+        <html><body style="font-family:sans-serif;padding:2rem;">
+            <p><a href="/brands/{slug}/facebook/edit">&larr; back</a></p>
+            <h1>Upload failed</h1>
+            {"".join(f"<p style='color:red;'>{e}</p>" for e in validation_errors)}
+        </body></html>
+        """, status_code=400)
+
+    content = get_content_config(brand.id, "facebook")
+    content_data = content.as_dict() if content else {}
+    existing_topics = content_data.get("caption_topics") or []
+
+    do_replace = replace == "1"
+    merged = merge_topics(existing_topics, uploaded_topics, replace=do_replace)
+    content_data["caption_topics"] = merged
+    upsert_content_config(brand.id, "facebook", content_data)
+
+    action = "replaced" if do_replace else "merged"
+    warning_html = "".join(f"<p style='color:orange;'>{e}</p>" for e in parse_errors)
+
+    return HTMLResponse(f"""
+    <html><body style="font-family:sans-serif;padding:2rem;">
+        <p><a href="/brands/{slug}/facebook/edit">&larr; back to edit</a>
+           | <a href="/brands/{slug}/facebook">view settings</a></p>
+        <h1>Topics uploaded</h1>
+        {warning_html}
+        <p>Successfully {action} topics.
+           {len(merged)} topic(s) now saved for {brand.name}.</p>
+        <ul>{"".join(f"<li>{t}</li>" for t in merged[:20])}
+        {"<li><em>...and more</em></li>" if len(merged) > 20 else ""}
+        </ul>
+    </body></html>
+    """)
+
+
+# ---------------------------------------------------------------------------
+# Phase 13D Step 3 — Post history view
+# ---------------------------------------------------------------------------
+
+@app.get("/brands/{slug}/history", response_class=HTMLResponse)
+def post_history(slug: str, request: Request, limit: int = 50):
+    _require_session(request)
+
+    brand = get_brand_by_slug(slug)
+    if not brand:
+        raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
+
+    # Read directly from publish_history using the same SQLite connection
+    # pattern as the rest of the platform (shared/store.py).
+    import os, sqlite3
+    db_path = os.getenv("STORE_DB_PATH", "/app/data/db/contentpilot.db")
+
+    try:
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT platform, status, external_post_id,
+                   error_message, published_at, module_name
+            FROM publish_history
+            WHERE target_key IN (
+                SELECT value FROM json_each(
+                    (SELECT credential_json FROM brand_credentials
+                     WHERE brand_id = ? AND credential_type = 'social_targets'
+                     ORDER BY id DESC LIMIT 1)
+                )
+            )
+            OR module_name LIKE ?
+            ORDER BY published_at DESC
+            LIMIT ?
+            """,
+            (brand.id, f"%brand_id={brand.id}%", limit),
+        ).fetchall()
+        conn.close()
+    except Exception:
+        # Fallback: show all recent rows (no brand-scoping possible without
+        # social_targets credential row being set)
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT platform, status, external_post_id, error_message, "
+            "published_at, module_name FROM publish_history "
+            "ORDER BY published_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        conn.close()
+
+    if not rows:
+        history_html = "<p><em>No posts published yet.</em></p>"
+    else:
+        history_rows = "".join(
+            f"<tr>"
+            f"<td>{r['published_at'][:19].replace('T',' ')}</td>"
+            f"<td>{r['platform']}</td>"
+            f"<td>{r['module_name']}</td>"
+            f"<td style='color:{'green' if r['status']=='success' else 'red'};'>{r['status']}</td>"
+            f"<td>{r['external_post_id'] or ''}</td>"
+            f"<td style='color:red;font-size:0.85em;'>{r['error_message'] or ''}</td>"
+            f"</tr>"
+            for r in rows
+        )
+        history_html = f"""
+        <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;">
+            <tr style="background:#f0f0f0;">
+                <th>Time (UTC)</th><th>Platform</th><th>Module</th>
+                <th>Status</th><th>Post ID</th><th>Error</th>
+            </tr>
+            {history_rows}
+        </table>
+        """
+
+    return f"""
+    <html><body style="font-family:sans-serif;padding:2rem;max-width:1000px;">
+        <p><a href="/brands/{slug}">&larr; back to {slug}</a>
+           | <a href="/logout">Logout</a></p>
+        <h1>{brand.name} — Post History</h1>
+        <p>Showing last {limit} publish attempts.</p>
+        {history_html}
+    </body></html>
+    """
+
+
+# ---------------------------------------------------------------------------
+# Phase 13D-Ext — schedule pause/resume
+# ---------------------------------------------------------------------------
+
+@app.post("/brands/{slug}/facebook/schedule/pause", response_class=HTMLResponse)
+def facebook_schedule_pause(slug: str, request: Request):
+    _require_session(request)
+    brand = get_brand_by_slug(slug)
+    if not brand:
+        raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
+    disable_schedules_for_brand(brand.id, "daily_news")
+    return RedirectResponse(url=f"/brands/{slug}/facebook", status_code=303)
 
 
 # ---------------------------------------------------------------------------
