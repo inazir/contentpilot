@@ -25,8 +25,8 @@ ContentPilot has successfully evolved from a single-brand automation platform in
 |---|---|
 | Branch | main |
 | State | Stable |
-| Current Milestone | Phase 13+ Infrastructure & Branding Hardened |
-| Next Milestone | Phase 14A |
+| Current Milestone | Phase 13D-Ext Complete |
+| Next Milestone | Phase 14A (Admin Panel) |
 | Production Readiness | Multi-brand pilot capable |
 | Architecture Stage | SaaS Foundation Established |
 
@@ -53,6 +53,9 @@ ContentPilot has successfully evolved from a single-brand automation platform in
 | 13A | Scheduler Service Core Integration | ✅ |
 | 13B | Multi-Brand SaaS Foundation | ✅ |
 | 13B-E | Multi-Brand Validation & Routing Test Hardening | ✅ |
+| 13C | Brand Dashboard Foundation | ✅ |
+| 13D | Dashboard Enhancements | ✅ |
+| 13D-Ext | Scheduler Wiring | ✅ |
 
 ---
 
@@ -546,7 +549,8 @@ Not yet activated: Stability AI, Ideogram, Flux
 Not yet implemented: Video generation pipeline
 
 ### SaaS Features
-Not yet implemented: Dashboard, REST API, Authentication, Billing, Credential encryption
+Not yet implemented: REST API, Authentication, Billing, Credential encryption
+Dashboard: operational at germanysupport.mycontentpilot.de — admin login, Facebook config/preview/scheduling, CSV topic upload, post history
 
 ---
 
@@ -589,6 +593,78 @@ GitHub webhook → VPS :9000 → deploy.sh → nginx-sync + docker compose up
 - **Unified Brand Alignment:** Sanitized the entire custom theme codebase (`mycontentpilot-theme`) using precise terminal lookaheads, systematically swapping all disconnected frontend references from `ContentPilot` to the correct public-facing brand token: `MyContentPilot` across core templates (`front-page.php`, `page-preise.php`, `page-funktionen.php`, `page-agb.php`, `page-impressum.php`, `page-datenschutz.php`).
 - **Production Transactional Mail Integration:** Successfully integrated WP Mail SMTP directly into the persistent WordPress stack. Authorized secure programmatic dispatch over Brevo's direct API tier, completed public domain registration for `mycontentpilot.de`, and deployed valid DKIM parameters inside Cloudflare DNS to guarantee absolute deliverability.
 - **Git Housekeeping and Tracking Optimization:** Implemented a comprehensive repository `.gitignore` targeting automated container storage and default WordPress structural paths. Flushed index state caches (`git rm -r --cached .`), dropping tracked file bulk cleanly from 849 files back to exact code modifications.
+
+---
+
+### Phase 13C — Brand Dashboard Foundation
+**Date:** June–July 2026 | **Status:** ✅ Complete
+
+**What was built:**
+- New module: modules/dashboard/ (FastAPI, uvicorn, port 8090)
+- Session-based single-admin login (itsdangerous signed cookies,
+  SHA-256 password hash stored in DASHBOARD_ADMIN_PASSWORD_HASH env var)
+- Facebook config edit form: Page ID, access token (masked display,
+  never pre-filled), caption topics, hashtags, excluded keywords,
+  location, CTA text, image source, title/subtitle templates,
+  first comment template, tone
+- Secure token handling: blank token on save preserves existing token
+- AI-powered dry-run preview: generates caption from saved config
+  with zero side effects on publish_history (verified by row count)
+- Hostname-based brand scoping: {slug}.mycontentpilot.de auto-resolves
+  brand from Host header; / redirects to /brands/{slug}
+- New DB table: brand_content_config (brand_id, platform, config_json,
+  updated_at) — mirrors brand_credentials pattern
+- Caddy + sites.yml updated for germanysupport.mycontentpilot.de
+
+**Pipeline wiring (Steps 7a/7b/7c):**
+- load_social_targets_for_brand(): DB credentials take priority over
+  SOCIAL__ {KEY} __ env vars for page_id/access_token per brand
+- generate_news_post() accepts optional content_config dict — uses
+  configured tone/excluded_keywords/location when present, falls back
+  to hardcoded defaults when not (byte-identical fallback verified)
+- publisher.py routes brand_context through to brand-aware credential
+  resolution; failure falls back to env silently (never crashes publish)
+
+**Key decisions:**
+- Shared container model retained (not per-brand containers)
+- JSON blob per (brand_id, platform) for content config
+- Credential secrets separated from content config by table
+- Token masking on all HTML output
+
+---
+
+### Phase 13D — Dashboard Enhancements + Scheduler Wiring
+**Date:** July 2026 | **Status:** ✅ Complete
+
+**Step 1 — Scheduling UI (modules/dashboard/facebook_schedule.py):**
+- parse_schedule_form, validate_schedule, schedule_to_display,
+  merge_schedule_into_config — pure logic, 10 unit tests
+- Schedule stored in brand_content_config under 'schedule' key:
+  frequency (daily/twice_daily/weekly), times (HH:MM UTC),
+  active_days (0=Mon…6=Sun), max_posts_per_day (1–10)
+- Scheduling section added to Facebook edit form with full validation
+
+**Step 2 — CSV topic upload (modules/dashboard/facebook_csv.py):**
+- POST /brands/{slug}/facebook/upload-topics
+- parse_csv_bytes, merge_topics, validate_topics_list — 8 unit tests
+- UTF-8, auto-detects header row, merge or replace mode
+- Max 100 topics / 300 chars each, deduplication
+
+**Step 3 — Post history view:**
+- GET /brands/{slug}/history — last 50 publish_history rows in a table
+
+**Phase 13D-Ext — Scheduler Wiring (shared/scheduler/schedule_config.py):**
+- schedule_config_to_cron_expressions(): dashboard config → APScheduler
+  cron strings; 0=Mon mapping (not 0=Sun like Unix cron), verified
+- Multiple posting times → multiple schedule rows (one per time)
+- sync_schedule_to_db(): disables old rows (preserves job_runs FK
+  history), inserts new rows; called on every Facebook settings save
+- Schedule failure never blocks content config save (try/except)
+- GET /brands/{slug}/facebook shows active cron expressions + status
+- POST /brands/{slug}/facebook/schedule/pause disables without deleting
+- 10 unit tests, all passing
+- Verified end-to-end: save form → DB row confirmed → UI shows active
+  → scheduler restart → schedule_registered log line confirmed
 
 ---
 
