@@ -64,6 +64,19 @@ from schedule_config import (
     disable_schedules_for_brand,
 )
 from hostname import slug_from_host
+from admin_auth import (
+    ADMIN_COOKIE_NAME,
+    verify_admin_password,
+    create_admin_session_token,
+    verify_admin_session_token,
+)
+from admin_views import (
+    validate_brand_form,
+    render_admin_brand_list,
+    render_admin_brand_create_form,
+    render_admin_brand_created,
+    render_admin_brand_detail,
+)
 from shared.ai import get_ai_config, ai_complete, AIClientError
 
 app = FastAPI(title="ContentPilot Dashboard")
@@ -761,6 +774,190 @@ def facebook_schedule_pause(slug: str, request: Request):
         raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
     disable_schedules_for_brand(brand.id, "daily_news")
     return RedirectResponse(url=f"/brands/{slug}/facebook", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Phase 14A — Admin panel
+# ---------------------------------------------------------------------------
+
+def _require_admin_session(request: Request) -> None:
+    """Raises RedirectLoginException to /admin/login if not authenticated."""
+    token = request.cookies.get(ADMIN_COOKIE_NAME, "")
+    if not verify_admin_session_token(token):
+        raise HTTPException(status_code=302, headers={"Location": "/admin/login"})
+
+
+@app.get("/admin/login", response_class=HTMLResponse)
+def admin_login_form(error: str | None = None):
+    error_html = f'<p style="color:red;">{error}</p>' if error else ""
+    return f"""
+    <html><body style="font-family:sans-serif;padding:2rem;max-width:500px;">
+        <h1>ContentPilot Admin</h1>
+        {error_html}
+        <form method="post" action="/admin/login">
+            <input type="password" name="password"
+                   placeholder="Admin password" autofocus style="width:100%;">
+            <br><br>
+            <button type="submit">Login</button>
+        </form>
+    </body></html>
+    """
+
+
+@app.post("/admin/login")
+def admin_login_submit(password: str = Form(...)):
+    if not verify_admin_password(password):
+        return RedirectResponse(
+            url="/admin/login?error=Invalid+admin+password", status_code=303
+        )
+    token = create_admin_session_token()
+    response = RedirectResponse(url="/admin", status_code=303)
+    response.set_cookie(
+        key=ADMIN_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=os.getenv("DASHBOARD_COOKIE_SECURE", "true").lower() == "true",
+        max_age=60 * 60 * 8,
+    )
+    return response
+
+
+@app.get("/admin/logout")
+def admin_logout():
+    response = RedirectResponse(url="/admin/login", status_code=303)
+    response.delete_cookie(ADMIN_COOKIE_NAME)
+    return response
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_home(request: Request, flash: str = ""):
+    _require_admin_session(request)
+    from shared.brands import get_all_enabled_brands
+    brands = get_all_enabled_brands()
+    brand_dicts = [
+        {
+            "id": b.id,
+            "name": b.name,
+            "slug": b.slug,
+            "enabled": b.enabled,
+        }
+        for b in brands
+    ]
+    return render_admin_brand_list(brand_dicts, flash=flash)
+
+
+@app.get("/admin/brands/new", response_class=HTMLResponse)
+def admin_brand_new_form(request: Request):
+    _require_admin_session(request)
+    return render_admin_brand_create_form()
+
+
+@app.post("/admin/brands/new", response_class=HTMLResponse)
+def admin_brand_new_submit(
+    request: Request,
+    name: str = Form(""),
+    slug: str = Form(""),
+    website_url: str = Form(""),
+    brand_name: str = Form(""),
+    brand_cta: str = Form(""),
+):
+    _require_admin_session(request)
+
+    name = name.strip()
+    slug = slug.strip().lower()
+
+    errors = validate_brand_form(name, slug)
+
+    # Also check slug uniqueness against existing brands
+    if not errors:
+        from shared.brands import get_brand_by_slug
+        existing = get_brand_by_slug(slug)
+        if existing:
+            errors.append(f"A brand with slug '{slug}' already exists.")
+
+    if errors:
+        return HTMLResponse(
+            render_admin_brand_create_form(errors=errors),
+            status_code=400,
+        )
+
+    from shared.brands import create_brand, upsert_profile
+    brand_id = create_brand(name=name, slug=slug)
+    upsert_profile(
+        brand_id=brand_id,
+        website_url=website_url.strip(),
+        brand_name=brand_name.strip() or name,
+        brand_cta=brand_cta.strip(),
+    )
+
+    logger.info(
+        "admin_brand_created | brand_id=%d | name=%s | slug=%s",
+        brand_id, name, slug,
+    )
+
+    return HTMLResponse(render_admin_brand_created(name, slug))
+
+
+@app.get("/admin/brands/{slug}", response_class=HTMLResponse)
+def admin_brand_detail(slug: str, request: Request, flash: str = ""):
+    _require_admin_session(request)
+
+    from shared.brands import get_brand_by_slug, get_all_credentials
+    brand = get_brand_by_slug(slug)
+    if not brand:
+        raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
+
+    creds = get_all_credentials(brand.id)
+    cred_types = {c.credential_type for c in creds}
+
+    schedules = get_active_schedules_for_brand(brand.id, "daily_news")
+
+    brand_dict = {
+        "id": brand.id,
+        "name": brand.name,
+        "slug": brand.slug,
+        "enabled": brand.enabled,
+    }
+
+    return render_admin_brand_detail(
+        brand=brand_dict,
+        credentials=cred_types,
+        schedules=schedules,
+        flash=flash,
+    )
+
+
+@app.post("/admin/brands/{slug}/enable", response_class=HTMLResponse)
+def admin_brand_enable(slug: str, request: Request):
+    _require_admin_session(request)
+    _admin_set_brand_enabled(slug, enabled=True)
+    return RedirectResponse(url=f"/admin/brands/{slug}?flash=Brand+enabled", status_code=303)
+
+
+@app.post("/admin/brands/{slug}/disable", response_class=HTMLResponse)
+def admin_brand_disable(slug: str, request: Request):
+    _require_admin_session(request)
+    _admin_set_brand_enabled(slug, enabled=False)
+    return RedirectResponse(url=f"/admin/brands/{slug}?flash=Brand+disabled", status_code=303)
+
+
+def _admin_set_brand_enabled(slug: str, enabled: bool) -> None:
+    """Enable or disable a brand by slug."""
+    import sqlite3 as _sqlite3
+    from datetime import datetime, timezone
+    db_path = os.getenv("STORE_DB_PATH", "/app/data/db/contentpilot.db")
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _sqlite3.connect(db_path, check_same_thread=False)
+    conn.execute(
+        "UPDATE brands SET enabled = ?, updated_at = ? WHERE slug = ?",
+        (1 if enabled else 0, now, slug),
+    )
+    conn.commit()
+    conn.close()
+    logger.info(
+        "admin_brand_%s | slug=%s", "enabled" if enabled else "disabled", slug
+    )
 
 
 # ---------------------------------------------------------------------------

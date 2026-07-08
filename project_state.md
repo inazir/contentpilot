@@ -25,8 +25,8 @@ ContentPilot has successfully evolved from a single-brand automation platform in
 |---|---|
 | Branch | main |
 | State | Stable |
-| Current Milestone | Phase 13D-Ext Complete |
-| Next Milestone | Phase 14A (Admin Panel) |
+| Current Milestone | Phase 14A Complete |
+| Next Milestone | Phase 15 (Client Login) |
 | Production Readiness | Multi-brand pilot capable |
 | Architecture Stage | SaaS Foundation Established |
 
@@ -56,6 +56,7 @@ ContentPilot has successfully evolved from a single-brand automation platform in
 | 13C | Brand Dashboard Foundation | ✅ |
 | 13D | Dashboard Enhancements | ✅ |
 | 13D-Ext | Scheduler Wiring | ✅ |
+| 14A | Admin Panel | ✅ |
 
 ---
 
@@ -550,7 +551,7 @@ Not yet implemented: Video generation pipeline
 
 ### SaaS Features
 Not yet implemented: REST API, Authentication, Billing, Credential encryption
-Dashboard: operational at germanysupport.mycontentpilot.de — admin login, Facebook config/preview/scheduling, CSV topic upload, post history
+Dashboard + Admin Panel: operational — brand dashboard at {slug}.mycontentpilot.de, admin panel at mycontentpilot.de/admin
 
 ---
 
@@ -665,6 +666,32 @@ GitHub webhook → VPS :9000 → deploy.sh → nginx-sync + docker compose up
 - 10 unit tests, all passing
 - Verified end-to-end: save form → DB row confirmed → UI shows active
   → scheduler restart → schedule_registered log line confirmed
+---
+
+### Phase 14A — Admin Panel
+**Date:** July 2026 | **Status:** ✅ Complete
+
+**What was built:**
+- New modules/dashboard/admin_auth.py: separate admin authentication
+  using ADMIN_PANEL_PASSWORD_HASH env var and cp_admin_session cookie
+  (distinct from brand cp_dashboard_session — isolation verified)
+- New modules/dashboard/admin_views.py: pure rendering functions +
+  form validation; 14 unit tests, all passing
+- Admin routes at /admin/...:
+    GET/POST /admin/login — admin-only login
+    GET      /admin       — list all brands with enabled/disabled status
+    GET/POST /admin/brands/new — create brand (writes brands +
+                                 brand_profiles tables)
+    GET      /admin/brands/{slug} — detail view with credentials + schedules
+    POST     /admin/brands/{slug}/enable|disable — toggle brand status
+- Brand creation page shows exact Caddyfile block and sites.yml entry
+  to add (does not auto-edit Caddy — intentional safety choice)
+- Security: brand session cookie cannot access admin panel (verified:
+  302 to /admin/login when hitting /admin with only brand cookie)
+- Verified: admin login, brand list, brand creation (DB confirmed),
+  disable/enable toggle; test brand cleaned up post-verification
+- Access: https://mycontentpilot.de/admin/login
+
 
 ---
 
