@@ -202,6 +202,10 @@ def render_admin_brand_detail(
             <tr><th>Cron (UTC)</th><th>Status</th></tr>
             {sched_rows}
         </table>
+
+        <h2>Users</h2>
+        <p><a href="/admin/brands/{brand['slug']}/users">
+            Manage users for this brand &rarr;</a></p>
     </body></html>
     """
 

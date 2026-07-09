@@ -19,6 +19,7 @@ additive.
 import os
 import sys
 import logging
+from typing import Optional
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, "/app")
@@ -77,9 +78,24 @@ from admin_views import (
     render_admin_brand_created,
     render_admin_brand_detail,
 )
+from user_auth import (
+    USER_COOKIE_NAME,
+    USER_SESSION_MAX_AGE,
+    init_user_db,
+    create_user,
+    delete_user,
+    get_users_for_brand,
+    authenticate_user,
+    create_user_session_token,
+    verify_user_session_token,
+    validate_new_user_form,
+)
 from shared.ai import get_ai_config, ai_complete, AIClientError
 
 app = FastAPI(title="ContentPilot Dashboard")
+
+# Phase 15: initialise users table on startup
+init_user_db()
 
 class RedirectLoginException(Exception):
     pass
@@ -95,9 +111,34 @@ async def redirect_login_handler(request: Request, exc: RedirectLoginException):
 
 
 def _require_session(request: Request) -> None:
-    token = request.cookies.get(SESSION_COOKIE_NAME, "")
-    if not verify_session_token(token):
-        raise RedirectLoginException()
+    """
+    Accept either:
+      1. A valid cp_user_session cookie (Phase 15 client login), OR
+      2. A valid cp_dashboard_session cookie (legacy single-password login)
+    Raises RedirectLoginException if neither is present/valid.
+    """
+    user_token = request.cookies.get(USER_COOKIE_NAME, "")
+    if user_token and verify_user_session_token(user_token):
+        return
+
+    legacy_token = request.cookies.get(SESSION_COOKIE_NAME, "")
+    if verify_session_token(legacy_token):
+        return
+
+    raise RedirectLoginException()
+
+
+def _get_session_brand_id(request: Request) -> Optional[int]:
+    """
+    If the request carries a user session, return its brand_id.
+    Returns None for legacy single-password sessions (brand is inferred from URL slug).
+    """
+    user_token = request.cookies.get(USER_COOKIE_NAME, "")
+    if user_token:
+        payload = verify_user_session_token(user_token)
+        if payload:
+            return payload.get("brand_id")
+    return None
 
 
 def _mask_token(token: str | None) -> str:
@@ -134,8 +175,27 @@ def index(request: Request):
 # ---------------------------------------------------------------------------
 
 @app.get("/login", response_class=HTMLResponse)
-def login_form(error: str | None = None):
+def login_form(request: Request, error: str | None = None):
     error_html = f'<p style="color:red;">{error}</p>' if error else ""
+    slug = slug_from_host(request.headers.get("host", ""))
+    # On a brand subdomain, show email+password form for client users.
+    # On direct access, show the legacy single-password form.
+    if slug:
+        return f"""
+    <html><body style="font-family: sans-serif; padding: 2rem; max-width: 400px;">
+        <h1>Login — {slug}</h1>
+        {error_html}
+        <form method="post" action="/login">
+            <label>Email<br>
+                <input type="email" name="email" style="width:100%;" autofocus>
+            </label><br><br>
+            <label>Password<br>
+                <input type="password" name="password" style="width:100%;">
+            </label><br><br>
+            <button type="submit">Login</button>
+        </form>
+    </body></html>
+    """
     return f"""
     <html><body style="font-family: sans-serif; padding: 2rem;">
         <h1>Dashboard Login</h1>
@@ -150,7 +210,40 @@ def login_form(error: str | None = None):
 
 
 @app.post("/login")
-def login_submit(password: str = Form(...)):
+def login_submit(
+    request: Request,
+    password: str = Form(...),
+    email: str = Form(""),
+):
+    slug = slug_from_host(request.headers.get("host", ""))
+
+    # Brand subdomain: try email+password against users table first
+    if slug and email.strip():
+        from shared.brands import get_brand_by_slug
+        brand = get_brand_by_slug(slug)
+        if brand:
+            user = authenticate_user(brand.id, email.strip(), password)
+            if user:
+                token = create_user_session_token(
+                    user_id=user["id"],
+                    brand_id=user["brand_id"],
+                    email=user["email"],
+                )
+                response = RedirectResponse(url="/", status_code=303)
+                response.set_cookie(
+                    key=USER_COOKIE_NAME,
+                    value=token,
+                    httponly=True,
+                    samesite="lax",
+                    secure=os.getenv("DASHBOARD_COOKIE_SECURE", "true").lower() == "true",
+                    max_age=USER_SESSION_MAX_AGE,
+                )
+                return response
+            return RedirectResponse(
+                url="/login?error=Invalid+email+or+password", status_code=303
+            )
+
+    # Fallback: legacy single-password login (admin/direct access)
     if not verify_password(password):
         return RedirectResponse(
             url="/login?error=Invalid+password", status_code=303
@@ -162,9 +255,7 @@ def login_submit(password: str = Form(...)):
         value=token,
         httponly=True,
         samesite="lax",
-        secure=os.getenv(
-            "DASHBOARD_COOKIE_SECURE", "true"
-        ).lower() == "true",
+        secure=os.getenv("DASHBOARD_COOKIE_SECURE", "true").lower() == "true",
         max_age=60 * 60 * 12,
     )
     return response
@@ -174,6 +265,7 @@ def login_submit(password: str = Form(...)):
 def logout():
     response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie(SESSION_COOKIE_NAME)
+    response.delete_cookie(USER_COOKIE_NAME)
     return response
 
 
@@ -957,6 +1049,123 @@ def _admin_set_brand_enabled(slug: str, enabled: bool) -> None:
     conn.close()
     logger.info(
         "admin_brand_%s | slug=%s", "enabled" if enabled else "disabled", slug
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 15 — Admin: user management per brand
+# ---------------------------------------------------------------------------
+
+@app.get("/admin/brands/{slug}/users", response_class=HTMLResponse)
+def admin_brand_users(slug: str, request: Request, flash: str = ""):
+    _require_admin_session(request)
+    from shared.brands import get_brand_by_slug
+    brand = get_brand_by_slug(slug)
+    if not brand:
+        raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
+
+    users = get_users_for_brand(brand.id)
+    flash_html = f'<p style="color:green;font-weight:bold;">{flash}</p>' if flash else ""
+
+    rows = "".join(
+        f"<tr>"
+        f"<td>{u['email']}</td>"
+        f"<td>{(u['created_at'] or '')[:10]}</td>"
+        f"<td>{(u['last_login'] or 'never')[:19].replace('T',' ')}</td>"
+        f"<td>"
+        f"<form method='post' action='/admin/brands/{slug}/users/{u['id']}/delete'"
+        f" style='display:inline;'>"
+        f"<button type='submit' style='color:red;' "
+        f"onclick=\"return confirm('Remove {u['email']}?')\">Remove</button>"
+        f"</form>"
+        f"</td>"
+        f"</tr>"
+        for u in users
+    ) or "<tr><td colspan='4'><em>No users yet.</em></td></tr>"
+
+    return f"""
+    <html><body style="font-family:sans-serif;padding:2rem;max-width:800px;">
+        <p><a href="/admin/brands/{slug}">&larr; back to {slug}</a>
+           | <a href="/admin/logout">Logout</a></p>
+        <h1>{brand.name} — Users</h1>
+        {flash_html}
+        <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;">
+            <tr style="background:#f0f0f0;">
+                <th>Email</th><th>Created</th><th>Last login</th><th>Actions</th>
+            </tr>
+            {rows}
+        </table>
+        <h2>Add user</h2>
+        <form method="post" action="/admin/brands/{slug}/users/add">
+            <label>Email<br>
+                <input type="email" name="email" style="width:100%;"></label><br><br>
+            <label>Password (min 8 chars)<br>
+                <input type="password" name="password" style="width:100%;"></label><br><br>
+            <label>Confirm password<br>
+                <input type="password" name="confirm" style="width:100%;"></label><br><br>
+            <button type="submit">Add user</button>
+        </form>
+    </body></html>
+    """
+
+
+@app.post("/admin/brands/{slug}/users/add", response_class=HTMLResponse)
+def admin_brand_users_add(
+    slug: str,
+    request: Request,
+    email: str = Form(""),
+    password: str = Form(""),
+    confirm: str = Form(""),
+):
+    _require_admin_session(request)
+    from shared.brands import get_brand_by_slug
+    brand = get_brand_by_slug(slug)
+    if not brand:
+        raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
+
+    errors = validate_new_user_form(email, password, confirm)
+    if errors:
+        error_html = "".join(f"<p style='color:red;'>{e}</p>" for e in errors)
+        return HTMLResponse(f"""
+        <html><body style="font-family:sans-serif;padding:2rem;">
+            <p><a href="/admin/brands/{slug}/users">&larr; back</a></p>
+            <h1>Add user failed</h1>
+            {error_html}
+        </body></html>
+        """, status_code=400)
+
+    try:
+        user_id = create_user(brand_id=brand.id, email=email, password=password)
+        logger.info(
+            "admin_user_created | brand_id=%d | slug=%s | email=%s | user_id=%d",
+            brand.id, slug, email, user_id,
+        )
+    except ValueError as exc:
+        return HTMLResponse(f"""
+        <html><body style="font-family:sans-serif;padding:2rem;">
+            <p><a href="/admin/brands/{slug}/users">&larr; back</a></p>
+            <h1>Add user failed</h1>
+            <p style="color:red;">{exc}</p>
+        </body></html>
+        """, status_code=400)
+
+    return RedirectResponse(
+        url=f"/admin/brands/{slug}/users?flash=User+{email}+added",
+        status_code=303,
+    )
+
+
+@app.post("/admin/brands/{slug}/users/{user_id}/delete")
+def admin_brand_users_delete(slug: str, user_id: int, request: Request):
+    _require_admin_session(request)
+    from shared.brands import get_brand_by_slug
+    brand = get_brand_by_slug(slug)
+    if not brand:
+        raise HTTPException(status_code=404, detail=f"Brand not found: {slug!r}")
+    delete_user(user_id=user_id, brand_id=brand.id)
+    return RedirectResponse(
+        url=f"/admin/brands/{slug}/users?flash=User+removed",
+        status_code=303,
     )
 
 

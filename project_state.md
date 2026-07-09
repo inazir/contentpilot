@@ -25,8 +25,8 @@ ContentPilot has successfully evolved from a single-brand automation platform in
 |---|---|
 | Branch | main |
 | State | Stable |
-| Current Milestone | Phase 14A Complete |
-| Next Milestone | Phase 15 (Client Login) |
+| Current Milestone | Phase 15 Complete |
+| Next Milestone | Phase 16 (Brand-scoped RSS) |
 | Production Readiness | Multi-brand pilot capable |
 | Architecture Stage | SaaS Foundation Established |
 
@@ -57,6 +57,7 @@ ContentPilot has successfully evolved from a single-brand automation platform in
 | 13D | Dashboard Enhancements | ✅ |
 | 13D-Ext | Scheduler Wiring | ✅ |
 | 14A | Admin Panel | ✅ |
+| 15 | Client Login | ✅ |
 
 ---
 
@@ -551,7 +552,7 @@ Not yet implemented: Video generation pipeline
 
 ### SaaS Features
 Not yet implemented: REST API, Authentication, Billing, Credential encryption
-Dashboard + Admin Panel: operational — brand dashboard at {slug}.mycontentpilot.de, admin panel at mycontentpilot.de/admin
+Dashboard + Admin Panel + Client Login: operational — brand dashboard at {slug}.mycontentpilot.de, admin panel at mycontentpilot.de/admin, per-brand client users supported
 
 ---
 
@@ -691,6 +692,25 @@ GitHub webhook → VPS :9000 → deploy.sh → nginx-sync + docker compose up
 - Verified: admin login, brand list, brand creation (DB confirmed),
   disable/enable toggle; test brand cleaned up post-verification
 - Access: https://mycontentpilot.de/admin/login
+
+---
+
+### Phase 15 — Client Login
+**Date:** July 2026 | **Status:** ✅ Complete
+
+**What was built:**
+- New modules/dashboard/user_auth.py:
+  - users table: (id, brand_id, email, password_hash, created_at, last_login) with UNIQUE(brand_id, email)
+  - PBKDF2-HMAC-SHA256 password hashing with random salt (260k iterations)
+  - create_user, delete_user (brand-scoped), get_users_for_brand, authenticate_user
+  - user session cookie: cp_user_session (distinct from legacy and admin cookies)
+- Updated modules/dashboard/app.py:
+  - /login: smart form switching (email+pass on subdomains, legacy pass-only on direct IP/domain)
+  - _require_session: accepts either client session or legacy dashboard session
+  - New admin routes for managing users per brand (/admin/brands/{slug}/users)
+- Security Isolation: Three distinct cookies (cp_dashboard_session, cp_admin_session, cp_user_session) verified for proper isolation.
+- Verified: Client login/logout, access control, legacy regression, and DB persistence.
+
 
 
 ---
