@@ -1,211 +1,240 @@
 # shared/routing/router.py
 """
-AutoPublisherRouter — routes articles to the best-matching client.
+Phase 14B: ArticleRouter — decides which brands receive which articles.
 
-This is the single entry point for all routing decisions. It depends only
-on abstractions (ClientRepository, BaseClassifier), never on concrete
-storage or classification implementations.
+Usage in runner.py:
+    router = ArticleRouter()
+    for brand in get_all_enabled_brands():
+        ctx = get_brand_context(brand.id)
+        routing_cfg = router.get_routing_config(brand.id)
+        articles = router.fetch_articles_for_brand(routing_cfg)
+        for article in articles:
+            decision = router.should_route(article, ctx, routing_cfg)
+            if decision.route:
+                # publish article to this brand
+                ...
 
-Usage:
-    from shared.routing import AutoPublisherRouter
-    from shared.routing.repositories import JsonClientRepository
-    from shared.routing.classifiers import KeywordClassifier
-
-    router = AutoPublisherRouter(
-        repository=JsonClientRepository(),
-        classifier=KeywordClassifier(),
-    )
-
-    decision = router.route(
-        article_id="abc123",
-        article_text="The Federal Reserve raised interest rates...",
-        tags=["finance", "Federal Reserve", "interest rates"],
-    )
-
-    if decision.routed:
-        client = decision.matched_client
-        # → finance_client_a (or whichever scored highest)
+RouteDecision carries the reason, so it can be logged/audited.
 """
-
 from __future__ import annotations
 
 import logging
 import os
-
-from .classifiers import BaseClassifier, KeywordClassifier
-from .exceptions import NoClientMatchedError
-from .models.routing import RoutingDecision, RoutingResult
-from .repositories import ClientRepository
+from dataclasses import dataclass, field
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MIN_SCORE = 0.05   # articles below this score are not routed
+STRATEGY_MANUAL = "manual"
+STRATEGY_KEYWORD = "keyword"
+STRATEGY_AI = "ai"
+
+VALID_STRATEGIES = {STRATEGY_MANUAL, STRATEGY_KEYWORD, STRATEGY_AI}
+DEFAULT_STRATEGY = STRATEGY_MANUAL
+DEFAULT_THRESHOLD = 0.01  # for keyword: any match; for AI: 1% relevance
 
 
-class AutoPublisherRouter:
+@dataclass
+class RouteDecision:
+    """Result of routing one article to one brand."""
+    route: bool
+    score: float = 0.0
+    strategy: str = STRATEGY_MANUAL
+    reason: str = ""
+
+    def __str__(self) -> str:
+        action = "ROUTE" if self.route else "SKIP"
+        return f"[{action}] strategy={self.strategy} score={self.score:.2f} reason={self.reason}"
+
+
+@dataclass
+class RoutingConfig:
+    """Per-brand routing configuration, read from brand_content_config."""
+    brand_id: int
+    strategy: str = STRATEGY_MANUAL
+    threshold: float = DEFAULT_THRESHOLD
+    rss_feeds: list[str] = field(default_factory=list)
+    topics: list[str] = field(default_factory=list)
+
+
+class ArticleRouter:
     """
-    Routes articles to the best-matching client.
+    Central routing coordinator.
 
-    Responsibilities:
-      1. Load all enabled clients from the repository.
-      2. Score each client against the article via the classifier.
-      3. Select the highest-scoring client above the minimum threshold.
-      4. Return a RoutingDecision with full audit trail.
-
-    Design notes:
-      - The router is stateless between calls. Client configs are loaded
-        from the repository on each call (or cached — see reload_on_call).
-      - Multiple clients with identical scores are broken by routing_priority.
-      - If no client meets the threshold, the decision has routed=False and
-        matched_client=None. The caller decides whether to skip or raise.
+    Reads routing config from brand_content_config(platform='routing')
+    and applies the configured strategy to decide which articles
+    each brand should receive.
     """
 
-    def __init__(
-        self,
-        repository: ClientRepository,
-        classifier: BaseClassifier | None = None,
-        min_score: float | None = None,
-        reload_on_call: bool = False,
-    ) -> None:
+    def get_routing_config(self, brand_id: int) -> RoutingConfig:
         """
-        Args:
-            repository:      Storage backend for client configs.
-            classifier:      Scoring implementation. Defaults to KeywordClassifier.
-            min_score:       Minimum score required to route. Reads
-                             ROUTING_MIN_SCORE env var if not provided.
-                             Defaults to 0.05.
-            reload_on_call:  If True, reload client configs from storage on
-                             every route() call. Useful for hot-reload in
-                             long-running services.
+        Load routing config for a brand from brand_content_config.
+        Falls back to safe defaults if no routing config is saved yet.
+
+        Routing config is stored in brand_content_config with
+        platform='routing' (a new platform key, not facebook/instagram).
         """
-        self._repository = repository
-        self._classifier = classifier or KeywordClassifier()
-        self._min_score = min_score if min_score is not None else float(
-            os.getenv("ROUTING_MIN_SCORE", str(_DEFAULT_MIN_SCORE))
+        try:
+            from shared.brands.repository import get_content_config, get_all_content_config
+
+            routing_row = get_content_config(brand_id, "routing")
+            if routing_row:
+                data = routing_row.as_dict()
+                strategy = data.get("routing_strategy", DEFAULT_STRATEGY)
+                if strategy not in VALID_STRATEGIES:
+                    logger.warning(
+                        "invalid_routing_strategy | brand_id=%d | strategy=%r | "
+                        "falling_back_to=%s", brand_id, strategy, DEFAULT_STRATEGY
+                    )
+                    strategy = DEFAULT_STRATEGY
+
+                return RoutingConfig(
+                    brand_id=brand_id,
+                    strategy=strategy,
+                    threshold=float(data.get("routing_threshold", DEFAULT_THRESHOLD)),
+                    rss_feeds=[f.strip() for f in data.get("rss_feeds", []) if f.strip()],
+                    topics=data.get("topics_override") or self._get_brand_topics(brand_id),
+                )
+
+        except Exception as exc:
+            logger.warning(
+                "routing_config_load_failed | brand_id=%d | error=%s | using_defaults",
+                brand_id, exc,
+            )
+
+        # No routing config saved yet — use safe defaults
+        return RoutingConfig(
+            brand_id=brand_id,
+            strategy=DEFAULT_STRATEGY,
+            threshold=DEFAULT_THRESHOLD,
+            rss_feeds=self._get_global_feeds(),
+            topics=self._get_brand_topics(brand_id),
         )
-        self._reload_on_call = reload_on_call
+
+    def _get_brand_topics(self, brand_id: int) -> list[str]:
+        """Get brand's caption_topics from facebook content config as routing topics."""
+        try:
+            from shared.brands.repository import get_content_config
+            fb_config = get_content_config(brand_id, "facebook")
+            if fb_config:
+                return fb_config.as_dict().get("caption_topics") or []
+        except Exception:
+            pass
+        return []
+
+    def _get_global_feeds(self) -> list[str]:
+        """Fallback: read global feed URLs from env (existing behavior)."""
+        raw = os.getenv("DAILY_NEWS_RSS_FEEDS", "").strip()
+        if not raw:
+            return []
+        return [u.strip() for u in raw.split(",") if u.strip()]
+
+    def fetch_articles_for_brand(self, routing_cfg: RoutingConfig) -> list:
+        """
+        Fetch RSS articles for a brand based on its routing config.
+
+        Uses brand-specific feed URLs if configured, falls back to
+        global DAILY_NEWS_RSS_FEEDS env var.
+        """
+        from shared.ingestion import fetch_feeds, get_max_articles, get_feed_timeout
+
+        feed_urls = routing_cfg.rss_feeds or self._get_global_feeds()
+        if not feed_urls:
+            logger.warning(
+                "no_feeds_configured | brand_id=%d", routing_cfg.brand_id
+            )
+            return []
+
+        max_articles = get_max_articles()
+        timeout = get_feed_timeout()
 
         logger.info(
-            "AutoPublisherRouter init | classifier=%s | min_score=%.3f | reload=%s",
-            self._classifier.name, self._min_score, reload_on_call,
+            "fetching_articles_for_brand | brand_id=%d | feeds=%d | strategy=%s",
+            routing_cfg.brand_id, len(feed_urls), routing_cfg.strategy,
         )
 
-    def route(
+        return fetch_feeds(feed_urls, max_articles=max_articles, timeout=timeout)
+
+    def should_route(
         self,
-        article_id: str,
-        article_text: str,
-        tags: list[str] | None = None,
-        raise_on_no_match: bool = False,
-    ) -> RoutingDecision:
+        article,
+        brand_context,
+        routing_cfg: RoutingConfig,
+        ai_cfg=None,
+    ) -> RouteDecision:
         """
-        Route one article to the best-matching client.
+        Decide whether to route an article to a brand.
 
         Args:
-            article_id:         Unique identifier for logging and deduplication.
-            article_text:       Combined article text (title + body + summary).
-            tags:               AI-generated or feed-provided tags.
-            raise_on_no_match:  If True, raises NoClientMatchedError when no
-                                client meets the minimum score threshold.
-                                If False (default), returns decision with routed=False.
+            article:       Article dataclass from shared.ingestion
+            brand_context: BrandContext for the target brand
+            routing_cfg:   RoutingConfig for this brand
+            ai_cfg:        Optional AIConfig override for AI strategy
 
         Returns:
-            RoutingDecision — always returned, never raises unless raise_on_no_match.
-
-        Raises:
-            NoClientMatchedError: Only when raise_on_no_match=True and no match.
+            RouteDecision — always returns something, never raises.
         """
-        tags = tags or []
+        strategy = routing_cfg.strategy
 
-        if self._reload_on_call:
-            self._repository.reload()
+        try:
+            if strategy == STRATEGY_MANUAL:
+                return RouteDecision(
+                    route=True,
+                    score=1.0,
+                    strategy=STRATEGY_MANUAL,
+                    reason="manual_strategy_always_routes",
+                )
 
-        clients = self._repository.get_all()
+            elif strategy == STRATEGY_KEYWORD:
+                from .strategies import keyword_match
+                score = keyword_match(
+                    article.title, article.summary, routing_cfg.topics
+                )
+                route = score > routing_cfg.threshold
+                return RouteDecision(
+                    route=route,
+                    score=score,
+                    strategy=STRATEGY_KEYWORD,
+                    reason=f"keyword_score={score:.2f} threshold={routing_cfg.threshold:.2f}",
+                )
 
-        if not clients:
-            logger.warning(
-                "routing_no_clients | article=%s | reason=no_enabled_clients",
-                article_id,
+            elif strategy == STRATEGY_AI:
+                from .strategies import ai_score
+                score = ai_score(
+                    article.title,
+                    article.summary,
+                    brand_name=brand_context.brand_name,
+                    topics=routing_cfg.topics,
+                    ai_cfg=ai_cfg,
+                )
+                route = score > routing_cfg.threshold
+                return RouteDecision(
+                    route=route,
+                    score=score,
+                    strategy=STRATEGY_AI,
+                    reason=f"ai_score={score:.2f} threshold={routing_cfg.threshold:.2f}",
+                )
+
+            else:
+                logger.warning(
+                    "unknown_routing_strategy | strategy=%r | defaulting_to_route",
+                    strategy,
+                )
+                return RouteDecision(
+                    route=True,
+                    score=1.0,
+                    strategy=strategy,
+                    reason="unknown_strategy_default_route",
+                )
+
+        except Exception as exc:
+            logger.error(
+                "routing_decision_failed | brand_id=%d | strategy=%s | error=%s | defaulting_to_route",
+                routing_cfg.brand_id, strategy, exc,
             )
-            return RoutingDecision(
-                article_id=article_id,
-                matched_client=None,
-                score=0.0,
-                routed=False,
-                reason="No enabled clients in repository",
+            return RouteDecision(
+                route=True,
+                score=1.0,
+                strategy=strategy,
+                reason=f"routing_error_default_route: {exc}",
             )
-
-        logger.info(
-            "routing_start | article=%s | clients=%d | classifier=%s | tags=%s",
-            article_id, len(clients), self._classifier.name, tags[:5],
-        )
-
-        # Score all clients
-        all_results: list[RoutingResult] = self._classifier.classify_all(
-            article_text=article_text,
-            tags=tags,
-            clients=clients,
-        )
-
-        # Log all scores for auditability
-        for result in all_results:
-            logger.debug(
-                "routing_score | article=%s | client=%s | score=%.4f | terms=%s",
-                article_id, result.client_id, result.score,
-                list(result.matched_terms)[:5],
-            )
-
-        # Find best match above threshold
-        best = self._select_best(all_results)
-
-        if best is None or best.score < self._min_score:
-            reason = (
-                f"Best score {best.score:.4f} below threshold {self._min_score}"
-                if best else "No results from classifier"
-            )
-            logger.info(
-                "routing_no_match | article=%s | threshold=%.3f | best_score=%s",
-                article_id, self._min_score,
-                f"{best.score:.4f}" if best else "none",
-            )
-
-            if raise_on_no_match:
-                raise NoClientMatchedError(article_id, self._min_score)
-
-            return RoutingDecision(
-                article_id=article_id,
-                matched_client=None,
-                score=best.score if best else 0.0,
-                all_results=all_results,
-                routed=False,
-                reason=reason,
-            )
-
-        # Resolve the winning client config
-        matched_client = self._repository.get_by_id(best.client_id)
-
-        logger.info(
-            "routing_matched | article=%s | client=%s | score=%.4f | terms=%s",
-            article_id, matched_client.client_id, best.score,
-            list(best.matched_terms)[:8],
-        )
-
-        return RoutingDecision(
-            article_id=article_id,
-            matched_client=matched_client,
-            score=best.score,
-            all_results=all_results,
-            routed=True,
-            reason=f"Matched {matched_client.client_id} (score={best.score:.4f})",
-        )
-
-    @staticmethod
-    def _select_best(results: list[RoutingResult]) -> RoutingResult | None:
-        """
-        Select the highest-scoring result.
-
-        Results are already sorted descending by score from classify_all().
-        If two results have identical scores, the one returned first from
-        classify_all() wins (which uses routing_priority as a tiebreaker
-        inside KeywordClassifier).
-        """
-        return results[0] if results else None

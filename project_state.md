@@ -26,7 +26,7 @@ ContentPilot has successfully evolved from a single-brand automation platform in
 | Branch | main |
 | State | Stable |
 | Current Milestone | Phase 15 Complete |
-| Next Milestone | Phase 16 (Brand-scoped RSS) |
+| Next Milestone | Phase 14B-Ext (Routing Dashboard UI) |
 | Production Readiness | Multi-brand pilot capable |
 | Architecture Stage | SaaS Foundation Established |
 
@@ -57,7 +57,8 @@ ContentPilot has successfully evolved from a single-brand automation platform in
 | 13D | Dashboard Enhancements | ✅ |
 | 13D-Ext | Scheduler Wiring | ✅ |
 | 14A | Admin Panel | ✅ |
-| 15 | Client Login | ✅ |
+| 14B | Shared Routing Framework | ✅ |
+| 15  | Client Login & Multi-User Auth | ✅ |
 
 ---
 
@@ -551,8 +552,8 @@ Not yet activated: Stability AI, Ideogram, Flux
 Not yet implemented: Video generation pipeline
 
 ### SaaS Features
-Not yet implemented: REST API, Authentication, Billing, Credential encryption
-Dashboard + Admin Panel + Client Login: operational — brand dashboard at {slug}.mycontentpilot.de, admin panel at mycontentpilot.de/admin, per-brand client users supported
+Not yet implemented: REST API, Billing, Credential encryption, Instagram real publishing, per-brand routing dashboard UI
+Dashboard + Admin Panel + Client Login: operational — brand dashboard at {slug}.mycontentpilot.de, admin panel at mycontentpilot.de/admin
 
 ---
 
@@ -695,21 +696,63 @@ GitHub webhook → VPS :9000 → deploy.sh → nginx-sync + docker compose up
 
 ---
 
-### Phase 15 — Client Login
+### Phase 14B — Shared Routing Framework
+**Date:** July 2026 | **Status:** ✅ Complete
+
+**What was built:**
+- New shared/routing/ package with three routing strategies:
+  - manual: always routes — every article from brand's feeds
+    goes to that brand (default, zero cost)
+  - keyword: scores article title+summary against brand's
+    caption_topics list; word-boundary aware; fractional scoring
+  - ai: calls shared.ai to score relevance 0-100 per brand;
+    falls back to keyword on AI failure; never crashes pipeline
+- ArticleRouter: reads routing config from brand_content_config
+  (platform='routing'), falls back to global env vars
+- RoutingConfig per brand: strategy, threshold, rss_feeds, topics
+- RouteDecision: route bool, score, strategy, reason — fully logged
+- modules/daily_news/runner.py patched: ArticleRouter integrated,
+  per-brand feed resolution with DAILY_NEWS_RSS_FEEDS env fallback,
+  routing decision logged before article processing
+- 14 unit tests, all passing
+- Verified: routing_decision log lines confirmed in production
+  (strategy=manual score=1.00 for all articles — correct default)
+- Next: Phase 14B-Ext adds dashboard UI to configure per-brand
+  RSS feeds and routing strategy
+
+---
+
+### Phase 15 — Client Login & Multi-User Auth
 **Date:** July 2026 | **Status:** ✅ Complete
 
 **What was built:**
 - New modules/dashboard/user_auth.py:
-  - users table: (id, brand_id, email, password_hash, created_at, last_login) with UNIQUE(brand_id, email)
-  - PBKDF2-HMAC-SHA256 password hashing with random salt (260k iterations)
-  - create_user, delete_user (brand-scoped), get_users_for_brand, authenticate_user
-  - user session cookie: cp_user_session (distinct from legacy and admin cookies)
-- Updated modules/dashboard/app.py:
-  - /login: smart form switching (email+pass on subdomains, legacy pass-only on direct IP/domain)
-  - _require_session: accepts either client session or legacy dashboard session
-  - New admin routes for managing users per brand (/admin/brands/{slug}/users)
-- Security Isolation: Three distinct cookies (cp_dashboard_session, cp_admin_session, cp_user_session) verified for proper isolation.
-- Verified: Client login/logout, access control, legacy regression, and DB persistence.
+  - users table: brand_id, email, password_hash, created_at,
+    last_login; UNIQUE(brand_id, email) constraint
+  - PBKDF2-HMAC-SHA256 password hashing with random salt
+    (260k iterations) — proper hashing distinct from admin SHA-256
+  - create_user, delete_user (brand_id scoped — cross-brand
+    deletion impossible), get_users_for_brand, authenticate_user
+  - cp_user_session cookie (24h) — third distinct cookie:
+    cp_dashboard_session (legacy), cp_admin_session (admin),
+    cp_user_session (client) — all verified distinct in tests
+  - validate_new_user_form: email regex, min 8 chars, confirm match
+  - init_user_db() called on dashboard startup — idempotent
+  - 16 unit tests, all passing
+- Updated app.py:
+  - /login shows email+password form on brand subdomains,
+    legacy single-password form on direct/admin access
+  - _require_session accepts cp_user_session OR cp_dashboard_session
+  - /logout clears both session cookies
+  - Admin routes added:
+      GET  /admin/brands/{slug}/users — list users + add form
+      POST /admin/brands/{slug}/users/add — create client user
+      POST /admin/brands/{slug}/users/{id}/delete — remove user
+- Verified end-to-end:
+  - Client email login issues cp_user_session (200 on brand view)
+  - Wrong password: 303 to /login?error=Invalid+email+or+password
+  - Legacy single-password: still issues cp_dashboard_session
+  - users table schema confirmed in production DB
 
 
 

@@ -36,6 +36,7 @@ from shared.config import get_publish_mode, get_media_config
 from shared.social import publish_post
 from shared.models import ExecutionSummary
 from shared.ingestion import fetch_feeds, get_feed_urls, get_max_articles, get_feed_timeout
+from shared.routing import ArticleRouter
 from generator import generate_news_post, summarize_article
 from shared.brands import get_content_config
 
@@ -368,7 +369,9 @@ def main(brand_context: Optional["BrandContext"] = None) -> ExecutionSummary:
     if args.topic:
         return _run_single_topic(args.topic, summary, args.dry_run, mode, media_cfg, brand_context, content_config=content_config)
 
-    feed_urls = get_feed_urls("DAILY_NEWS_RSS_FEEDS")
+    router = ArticleRouter()
+    routing_cfg = router.get_routing_config(brand_context.brand_id if brand_context else 1)
+    feed_urls = routing_cfg.rss_feeds or get_feed_urls("DAILY_NEWS_RSS_FEEDS")
     if not feed_urls:
         import random
         return _run_single_topic(
@@ -389,6 +392,16 @@ def main(brand_context: Optional["BrandContext"] = None) -> ExecutionSummary:
     logger.info("Fetched %d articles from feeds%s", len(articles), _brand_log(brand_context))
 
     for article in articles:
+        # Phase 14B: route decision
+        if brand_context:
+            decision = router.should_route(article, brand_context, routing_cfg)
+            logger.info(
+                "routing_decision | brand_id=%d | title=%r | %s",
+                brand_context.brand_id, article.title[:50], decision,
+            )
+            if not decision.route:
+                summary.articles_skipped_routing = getattr(summary, 'articles_skipped_routing', 0) + 1
+                continue
         if args.dry_run:
             logger.info("dry_run: would process | title=%r%s", article.title, _brand_log(brand_context))
             summary.posts_generated += 1
